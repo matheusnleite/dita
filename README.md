@@ -76,7 +76,7 @@ Depois, no Android: abra a URL no Chrome, menu **⋮ → Instalar app**. O PWA g
 
 1. Entre com a senha.
 2. Escolha o **Foco** (projeto) ou fique na raiz.
-3. Toque no microfone do teclado do Android e dite.
+3. Toque no botão de microfone do app para ditar, ou use o microfone do teclado. Toque de novo para parar.
 4. Envie. A resposta aparece na conversa em tempo real.
 5. No menu, **Modelo** lista os modelos do OpenCode, grátis primeiro, e troca o modelo da Sessão na hora.
 6. **+** cria projeto (pasta + `git init` + README + `.gitignore`).
@@ -96,7 +96,7 @@ dita/
 ## Fases
 
 - [x] **Fase 1** — Ponte, login, projetos, Sessão raiz, Foco, enviar texto, conversa em tempo real, seletor de modelo.
-- [ ] **Fase 2** — ditado dentro do app (Web Speech API) com fallback.
+- [x] **Fase 2** — ditado dentro do app (Web Speech API) com fallback.
 - [ ] **Fase 3** — transcrição no PC com `whisper.cpp`.
 - [ ] **Fase 4** — Web Push e tela de Aprovação para Ações de risco.
 

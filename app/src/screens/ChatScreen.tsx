@@ -220,7 +220,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
 
       <MessageList messages={snapshot.messages} pending={pending} session={snapshot.session} />
 
-      <Composer onSend={send} disabled={busy} />
+      <Composer onSend={send} onError={setError} disabled={busy} />
 
       {menuOpen && (
         <Sheet

@@ -1,0 +1,90 @@
+// @vitest-environment jsdom
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import Composer from "./Composer.js";
+
+type Result = { isFinal: boolean; 0: { transcript: string }; length: number };
+
+class FakeRecognition {
+  static instance: FakeRecognition | null = null;
+  lang = "";
+  continuous = false;
+  interimResults = false;
+  onresult: ((event: { resultIndex: number; results: Result[] }) => void) | null = null;
+  onerror: ((event: { error: string }) => void) | null = null;
+  onend: (() => void) | null = null;
+  start = vi.fn();
+  stop = vi.fn(() => this.onend?.());
+  abort = vi.fn();
+
+  constructor() {
+    FakeRecognition.instance = this;
+  }
+
+  emitFinal(text: string) {
+    this.onresult?.({
+      resultIndex: 0,
+      results: [{ isFinal: true, 0: { transcript: text }, length: 1 }],
+    });
+  }
+}
+
+afterEach(() => {
+  cleanup();
+  // @ts-expect-error test cleanup
+  delete window.SpeechRecognition;
+  // @ts-expect-error test cleanup
+  delete window.webkitSpeechRecognition;
+  FakeRecognition.instance = null;
+});
+
+describe("Composer ditado", () => {
+  it("mostra fallback quando ditado não é suportado", () => {
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} />);
+    const mic = screen.getByRole("button", { name: "Iniciar ditado" });
+    expect(mic.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(/ditado indisponível neste navegador/i)).toBeTruthy();
+  });
+
+  it("inicia e para o ditado no toque", () => {
+    // @ts-expect-error test mock
+    window.SpeechRecognition = FakeRecognition;
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} />);
+
+    const mic = screen.getByRole("button", { name: "Iniciar ditado" });
+    fireEvent.click(mic);
+    expect(FakeRecognition.instance?.start).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Parar ditado" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Parar ditado" }));
+    expect(FakeRecognition.instance?.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("coloca o texto final no campo de ditado", () => {
+    // @ts-expect-error test mock
+    window.SpeechRecognition = FakeRecognition;
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar ditado" }));
+    act(() => {
+      FakeRecognition.instance?.emitFinal("olá mundo");
+    });
+
+    const textarea = screen.getByPlaceholderText(/ouvindo/i) as HTMLTextAreaElement;
+    expect(textarea.value).toBe("olá mundo");
+  });
+
+  it("reporta erro de permissão", () => {
+    // @ts-expect-error test mock
+    window.SpeechRecognition = FakeRecognition;
+    const onError = vi.fn();
+    render(<Composer onSend={vi.fn()} onError={onError} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar ditado" }));
+    FakeRecognition.instance?.onerror?.({ error: "not-allowed" });
+
+    expect(onError).toHaveBeenCalledWith(
+      "Microfone bloqueado. Libere o acesso nas permissões do navegador.",
+    );
+  });
+});
