@@ -4,6 +4,7 @@ import FocusBar from "../components/FocusBar.js";
 import MessageList from "../components/MessageList.js";
 import ModelDialog from "../components/ModelDialog.js";
 import NewProjectDialog from "../components/NewProjectDialog.js";
+import SessionsDialog from "../components/SessionsDialog.js";
 import Sheet from "../components/Sheet.js";
 import TrashDialog from "../components/TrashDialog.js";
 import { MenuIcon } from "../components/icons.js";
@@ -27,7 +28,7 @@ type Props = {
   onSignedOut: () => void;
 };
 
-type Dialog = "new-project" | "trash" | "model" | null;
+type Dialog = "new-project" | "trash" | "model" | "sessions" | null;
 
 const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [], approvals: [] };
 
@@ -377,6 +378,16 @@ export default function ChatScreen({ onSignedOut }: Props) {
               type="button"
               onClick={() => {
                 setMenuOpen(false);
+                setDialog("sessions");
+              }}
+              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+            >
+              <span className="px-4">Sessões</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
                 setDialog("new-project");
               }}
               className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
@@ -427,6 +438,18 @@ export default function ChatScreen({ onSignedOut }: Props) {
           error={modelsError}
           onClose={() => setDialog(null)}
           onSelect={selectModel}
+        />
+      )}
+
+      {dialog === "sessions" && (
+        <SessionsDialog
+          currentId={snapshot.session?.id ?? null}
+          onClose={() => setDialog(null)}
+          onSelect={(session) => {
+            setDialog(null);
+            setSnapshot((current) => ({ ...current, session }));
+            setPending([]);
+          }}
         />
       )}
     </div>

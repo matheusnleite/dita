@@ -59,18 +59,18 @@ Enquanto `DITA_PASSWORD` estiver no `.env`, ela é a senha válida. Para invalid
 
 ## Expor na internet
 
-O túnel é o que deixa o app acessível de qualquer lugar. Cloudflare Tunnel, grátis:
+Rápido (URL temporária):
 
 ```powershell
 winget install --id Cloudflare.cloudflared
 cloudflared tunnel --url http://localhost:8787
 ```
 
-O comando imprime uma URL `https://….trycloudflare.com`. Ela muda a cada execução; para um endereço fixo, crie um named tunnel no painel da Cloudflare.
+URL fixa + serviço Windows: veja [`docs/tunnel.md`](docs/tunnel.md).
 
-Depois, no Android: abra a URL no Chrome, menu **⋮ → Instalar app**. O PWA ganha ícone próprio e abre em tela cheia.
+Depois, no Android: abra a URL no Chrome, menu **⋮ → Instalar app**.
 
-> Segurança: quem tiver a URL e a senha tem o mesmo poder que você no PC — editar arquivos e rodar comandos. Use HTTPS (o túnel já dá), senha forte e não compartilhe o endereço. Neste projeto a senha é a única barreira.
+> Segurança: quem tiver a URL e a senha tem o mesmo poder que você no PC. Use senha forte e não compartilhe o endereço.
 
 ## Usar
 
@@ -79,10 +79,11 @@ Depois, no Android: abra a URL no Chrome, menu **⋮ → Instalar app**. O PWA g
 3. Toque no botão de microfone do app para ditar, ou use o microfone do teclado. Toque de novo para parar.
 4. Envie. A resposta aparece na conversa em tempo real.
 5. No menu, **Modelo** lista os modelos do OpenCode, grátis primeiro, e troca o modelo da Sessão na hora.
-6. No menu, **Notificações** ativa Web Push para aprovações pendentes.
-7. Ações de risco pedem aprovação na tela; você pode negar, permitir uma vez ou sempre.
-8. **+** cria projeto (pasta + `git init` + README + `.gitignore`).
-9. A lixeira move o projeto para `_lixeira/<nome>-<data>`; nada é apagado de imediato.
+6. No menu, **Sessões** lista sessões antigas, abre ou renomeia.
+7. No menu, **Notificações** ativa Web Push para aprovações pendentes.
+8. Ações de risco pedem aprovação na tela; você pode negar, permitir uma vez ou sempre.
+9. **+** cria projeto (pasta + `git init` + README + `.gitignore`).
+10. A lixeira move o projeto para `_lixeira/<nome>-<data>`; nada é apagado de imediato.
 
 ## Estrutura
 

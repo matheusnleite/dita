@@ -64,6 +64,21 @@ export const api = {
   newSession() {
     return request<{ session: Snapshot["session"] }>("/api/session", { method: "POST" });
   },
+  sessions() {
+    return request<{ sessions: Array<{ id: string; title: string; directory: string }> }>("/api/sessions");
+  },
+  selectSession(sessionID: string) {
+    return request<{ session: Snapshot["session"] }>("/api/session/select", {
+      method: "POST",
+      body: JSON.stringify({ sessionID }),
+    });
+  },
+  renameSession(sessionID: string, title: string) {
+    return request<{ ok: true; title: string }>("/api/session/rename", {
+      method: "POST",
+      body: JSON.stringify({ sessionID, title }),
+    });
+  },
   models() {
     return request<{ models: ModelOption[] }>("/api/models");
   },

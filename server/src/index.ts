@@ -26,6 +26,7 @@ import {
   ensureServer,
   listModels,
   listPermissions,
+  listSessions,
   messages,
   replyPermission,
   sendPrompt,
@@ -220,6 +221,68 @@ await app.register(async (api) => {
   api.post("/api/session", async () => {
     const session = await newSession();
     return { session };
+  });
+
+  api.get("/api/sessions", async (_request, reply) => {
+    try {
+      await ensureServer();
+      const sessions = await listSessions(config.root);
+      return {
+        sessions: sessions.map((session) => ({
+          id: session.id,
+          title: session.title || "Nova conversa",
+          directory: session.directory || config.root,
+        })),
+      };
+    } catch (error) {
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/session/select", async (request, reply) => {
+    const body = (request.body ?? {}) as { sessionID?: unknown };
+    if (typeof body.sessionID !== "string") {
+      return reply.code(400).send({ error: "invalid_session" });
+    }
+    try {
+      await ensureServer();
+      const sessions = await listSessions(config.root);
+      const found = sessions.find((session) => session.id === body.sessionID);
+      if (!found) return reply.code(404).send({ error: "session_not_found" });
+
+      state.session = {
+        id: found.id,
+        directory: found.directory || config.root,
+        createdAt: Date.now(),
+        title: found.title || "Nova conversa",
+      };
+      state.focus = null;
+      saveState(state);
+      return { session: state.session };
+    } catch (error) {
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/session/rename", async (request, reply) => {
+    const body = (request.body ?? {}) as { sessionID?: unknown; title?: unknown };
+    if (typeof body.sessionID !== "string" || typeof body.title !== "string") {
+      return reply.code(400).send({ error: "invalid_rename" });
+    }
+    const title = body.title.replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!title) return reply.code(400).send({ error: "empty_title" });
+
+    try {
+      await ensureServer();
+      await updateSessionTitle(body.sessionID, title);
+      if (state.session?.id === body.sessionID) {
+        state.session = { ...state.session, title };
+        saveState(state);
+      }
+      return { ok: true, title };
+    } catch (error) {
+      return reply.code(502).send({ error: (error as Error).message });
+    }
   });
 
   api.post("/api/focus", async (request, reply) => {
