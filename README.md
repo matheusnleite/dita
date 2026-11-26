@@ -107,7 +107,7 @@ winget install --id Gyan.FFmpeg.Essentials -e
 pip install faster-whisper
 ```
 
-No app, menu **Ditado** alterna entre `PC (Whisper)` e `navegador`. No modo PC, o botão grava áudio, envia para a Ponte e o texto volta para o campo. Modelo padrão: `base` (`DITA_WHISPER_MODEL` no `.env`).
+No app, menu **Ditado** alterna entre `PC (Whisper)` e `navegador`. No modo PC, o botão grava áudio, envia para a Ponte e o texto volta para o campo. Modelo padrão: `small` (`DITA_WHISPER_MODEL` no `.env`). Primeira execução do modelo baixa o cache.
 
 ## Testes
 

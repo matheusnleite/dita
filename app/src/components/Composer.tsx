@@ -69,7 +69,6 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
     setValue("");
     if (textarea.current) {
       textarea.current.style.height = "auto";
-      textarea.current.focus();
     }
   }
 

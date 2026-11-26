@@ -42,6 +42,19 @@ afterEach(() => {
 });
 
 describe("Composer ditado", () => {
+  it("não abre teclado ao enviar pelo botão", async () => {
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onError={vi.fn()} dictationMode="browser" />);
+    const textarea = screen.getByPlaceholderText(/dite ou escreva/i) as HTMLTextAreaElement;
+    const focusSpy = vi.spyOn(textarea, "focus");
+
+    fireEvent.change(textarea, { target: { value: "teste" } });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar ditado" }));
+
+    expect(onSend).toHaveBeenCalledWith("teste");
+    expect(focusSpy).not.toHaveBeenCalled();
+  });
+
   it("mostra fallback quando ditado não é suportado", () => {
     render(<Composer onSend={vi.fn()} onError={vi.fn()} dictationMode="browser" />);
     const mic = screen.getByRole("button", { name: "Iniciar ditado" });

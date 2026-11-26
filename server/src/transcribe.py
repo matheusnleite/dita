@@ -40,7 +40,7 @@ def main() -> None:
                 audio,
                 language=language,
                 vad_filter=True,
-                beam_size=1,
+                beam_size=5,
             )
             text = "".join(segment.text for segment in segments).strip()
             print(json.dumps({"ok": True, "text": text, "language": info.language}), flush=True)
