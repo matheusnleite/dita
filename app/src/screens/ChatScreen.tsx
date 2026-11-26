@@ -253,25 +253,28 @@ export default function ChatScreen({ onSignedOut }: Props) {
   const modelLabel = currentModel?.name ?? selectedModel?.modelID ?? "padrão";
 
   return (
-    <div className="flex h-dvh flex-col bg-cave-950">
-      <header className="safe-top flex items-center gap-3 border-b border-cave-800 bg-cave-950/90 px-4 pb-3">
-        <h1 className="text-xl font-semibold tracking-tight">dita</h1>
+    <div className="flex h-dvh flex-col bg-ink-950">
+      <header className="safe-top flex items-center gap-3 border-b border-ink-800 bg-ink-950/92 px-4 pb-3 backdrop-blur">
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-brass-500" aria-hidden="true" />
+          <h1 className="text-xl font-semibold tracking-tight text-bone-100">dita</h1>
+        </div>
         <span
-          className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] ${
+          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
             online
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-              : "border-cave-700 bg-cave-900 text-cave-400"
+              ? "border-ok-500/30 bg-ok-500/10 text-emerald-200"
+              : "border-ink-700 bg-ink-900 text-ink-400"
           }`}
         >
-          <span className={`size-1.5 rounded-full ${online ? "bg-emerald-400" : "bg-cave-500"}`} />
+          <span className={`size-1.5 rounded-full ${online ? "bg-ok-500" : "bg-ink-500"}`} />
           {online ? "online" : "reconectando"}
         </span>
-        <span className="ml-auto max-w-[38%] truncate text-xs text-cave-500">{focusLabel}</span>
+        <span className="ml-auto max-w-[38%] truncate font-mono text-[11px] text-ink-400">{focusLabel}</span>
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-label="Menu"
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-cave-800 text-cave-300 transition hover:text-cave-100"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ink-700 bg-ink-900/60 text-bone-300 transition hover:border-brass-500/40 hover:text-bone-100"
         >
           <MenuIcon />
         </button>
@@ -287,9 +290,9 @@ export default function ChatScreen({ onSignedOut }: Props) {
       />
 
       {error && (
-        <div role="alert" className="flex items-start gap-3 border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-300">
+        <div role="alert" className="flex items-start gap-3 border-b border-record-500/20 bg-record-500/10 px-4 py-2 text-sm text-red-200">
           <span className="flex-1">{error}</span>
-          <button type="button" onClick={() => setError(null)} className="text-red-200/70">
+          <button type="button" onClick={() => setError(null)} className="shrink-0 text-red-200/70 hover:text-red-100">
             fechar
           </button>
         </div>
@@ -309,37 +312,37 @@ export default function ChatScreen({ onSignedOut }: Props) {
           </p>
           <div className="space-y-2">
             {snapshot.approvals.map((item) => (
-              <div key={item.id} className="rounded-xl border border-cave-700 bg-cave-950 p-3">
-                <p className="text-sm text-cave-100">
+              <div key={item.id} className="rounded-xl border border-ink-700 bg-ink-950 p-3">
+                <p className="text-sm text-bone-100">
                   <span className="font-mono text-amber-300">{item.action}</span>
                 </p>
                 {item.resources.length > 0 && (
-                  <p className="mt-1 break-all font-mono text-[11px] text-cave-400">
+                  <p className="mt-1 break-all font-mono text-[11px] text-ink-400">
                     {item.resources.join(", ")}
                   </p>
                 )}
                 {item.message && (
-                  <p className="mt-1 text-xs text-cave-300">{item.message}</p>
+                  <p className="mt-1 text-xs text-bone-300">{item.message}</p>
                 )}
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
                     onClick={() => replyApproval(item.sessionID, item.id, "reject")}
-                    className="h-10 flex-1 rounded-lg border border-red-500/40 text-sm text-red-300"
+                    className="h-10 flex-1 rounded-lg border border-record-500/40 text-sm text-red-200 hover:bg-record-500/10"
                   >
                     Negar
                   </button>
                   <button
                     type="button"
                     onClick={() => replyApproval(item.sessionID, item.id, "once")}
-                    className="h-10 flex-1 rounded-lg border border-cave-600 text-sm text-cave-100"
+                    className="h-10 flex-1 rounded-lg border border-ink-700 text-sm text-bone-100 hover:bg-ink-800"
                   >
                     Permitir
                   </button>
                   <button
                     type="button"
                     onClick={() => replyApproval(item.sessionID, item.id, "always")}
-                    className="h-10 flex-1 rounded-lg bg-emerald-600 text-sm text-cave-950"
+                    className="h-10 flex-1 rounded-lg bg-ok-500 text-sm font-medium text-ink-950 hover:brightness-95"
                   >
                     Sempre
                   </button>
@@ -351,8 +354,8 @@ export default function ChatScreen({ onSignedOut }: Props) {
       )}
 
       {snapshot.forms.length > 0 && (
-        <div className="border-t border-sky-500/30 bg-sky-500/10 px-3 py-3">
-          <p className="mb-2 text-xs font-medium text-sky-200">
+        <div className="border-t border-info-500/30 bg-info-500/10 px-3 py-3">
+          <p className="mb-2 text-xs font-medium text-blue-100">
             Pergunta do agente ({snapshot.forms.length})
           </p>
           <div className="space-y-2">
@@ -389,7 +392,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
             <button
               type="button"
               onClick={toggleDictationMode}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="block truncate px-4">
                 Ditado · {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
@@ -398,7 +401,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
             <button
               type="button"
               onClick={enablePush}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="block truncate px-4">
                 Notificações{pushStatus ? ` · ${pushStatus}` : ""}
@@ -411,14 +414,14 @@ export default function ChatScreen({ onSignedOut }: Props) {
                 setDialog("model");
                 void refreshModels();
               }}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="block truncate px-4">Modelo · {modelLabel}</span>
             </button>
             <button
               type="button"
               onClick={newSession}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="px-4">Nova sessão (contexto limpo)</span>
             </button>
@@ -428,7 +431,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
                 setMenuOpen(false);
                 setDialog("sessions");
               }}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="px-4">Sessões</span>
             </button>
@@ -438,7 +441,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
                 setMenuOpen(false);
                 setDialog("new-project");
               }}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="px-4">Criar projeto</span>
             </button>
@@ -448,21 +451,21 @@ export default function ChatScreen({ onSignedOut }: Props) {
                 setMenuOpen(false);
                 setDialog("trash");
               }}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-red-500/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-red-500/50"
             >
               <span className="px-4">Mover projeto para a lixeira</span>
             </button>
             <button
               type="button"
               onClick={() => void refreshProjects()}
-              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
             >
               <span className="px-4">Atualizar projetos</span>
             </button>
             <button
               type="button"
               onClick={signOut}
-              className="h-12 w-full rounded-xl border border-cave-800 bg-transparent text-left text-sm text-cave-400 transition hover:text-cave-100"
+              className="h-12 w-full rounded-xl border border-ink-800 bg-transparent text-left text-sm text-ink-400 transition hover:text-bone-100"
             >
               <span className="px-4">Sair</span>
             </button>

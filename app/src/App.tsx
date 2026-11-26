@@ -26,9 +26,9 @@ export default function App() {
 
   if (phase === "loading") {
     return (
-      <div className="flex h-dvh items-center justify-center bg-cave-950">
-        <div className="flex items-center gap-3 text-cave-400">
-          <span className="size-2 animate-pulse rounded-full bg-ember" />
+      <div className="flex h-dvh items-center justify-center bg-ink-950">
+        <div className="flex items-center gap-3 font-mono text-sm text-ink-400">
+          <span className="size-2 animate-pulse rounded-full bg-brass-500" />
           carregando
         </div>
       </div>

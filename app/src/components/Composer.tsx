@@ -88,13 +88,14 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
   }
 
   return (
-    <div className="border-t border-cave-800 bg-cave-900/80 px-3 pt-2 safe-bottom">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-cave-500">
+    <div className="border-t border-ink-800 bg-ink-900/90 px-3 pt-3 backdrop-blur safe-bottom">
+      <div className="mb-2 flex items-center gap-2 text-[11px] text-ink-400">
+        <span className={`size-1.5 rounded-full ${active || transcribing ? "bg-record-500 animate-pulse" : "bg-brass-500/70"}`} />
         <MicIcon className="size-3.5" />
-        {hint}
+        <span>{hint}</span>
       </div>
 
-      <div className="flex items-end gap-2 pb-1">
+      <div className="flex items-end gap-2 pb-2">
         <button
           type="button"
           onClick={toggleMic}
@@ -103,9 +104,9 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
           aria-pressed={active}
           className={`flex size-12 shrink-0 items-center justify-center rounded-2xl border transition ${
             active
-              ? "border-red-500/60 bg-red-500/15 text-red-300"
-              : "border-cave-700 bg-cave-950 text-cave-300 hover:border-ember/50 hover:text-cave-100"
-          } disabled:opacity-30`}
+              ? "border-record-500/60 bg-record-500/15 text-red-200 shadow-[0_0_0_4px_rgba(217,92,74,0.12)]"
+              : "border-ink-700 bg-ink-950 text-bone-300 hover:border-brass-500/50 hover:text-bone-100"
+          } disabled:cursor-not-allowed disabled:opacity-30`}
         >
           <MicIcon className={active || transcribing ? "size-5 animate-pulse" : "size-5"} />
         </button>
@@ -122,14 +123,14 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
           onKeyDown={handleKeyDown}
           placeholder={active ? "Ouvindo…" : "Dite ou escreva…"}
           enterKeyHint="send"
-          className="max-h-40 min-h-12 flex-1 resize-none rounded-2xl border border-cave-700 bg-cave-950 px-4 py-3 text-base leading-relaxed text-cave-100 outline-none transition placeholder:text-cave-500 focus:border-ember/60 focus:ring-2 focus:ring-ember/15"
+          className="max-h-40 min-h-12 flex-1 resize-none rounded-2xl border border-ink-700 bg-ink-950 px-4 py-3 text-base leading-relaxed text-bone-100 outline-none transition placeholder:text-ink-500 focus:border-brass-500/60 focus:ring-2 focus:ring-brass-500/15"
         />
         <button
           type="button"
           onClick={submit}
           disabled={!canSend}
           aria-label="Enviar ditado"
-          className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-ember text-cave-950 transition enabled:hover:bg-ember-dim disabled:opacity-30"
+          className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brass-500 text-ink-950 transition enabled:hover:bg-brass-600 disabled:cursor-not-allowed disabled:opacity-30"
         >
           <SendIcon />
         </button>

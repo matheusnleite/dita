@@ -18,24 +18,24 @@ export default function Sheet({ title, description, onClose, children }: Props) 
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/70 backdrop-blur-sm sm:items-center">
       <button type="button" aria-label="Fechar" className="absolute inset-0" onClick={onClose} />
       <section
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-lg rounded-t-3xl border border-cave-700 bg-cave-900 p-5 shadow-2xl sm:rounded-3xl safe-bottom"
+        className="relative w-full max-w-lg rounded-t-3xl border border-ink-700 bg-ink-900 p-5 shadow-2xl shadow-black/30 sm:rounded-3xl safe-bottom"
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-cave-700 sm:hidden" />
-        <header className="mb-4 flex items-start justify-between gap-4">
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-ink-700 sm:hidden" />
+        <header className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-cave-100">{title}</h2>
-            {description && <p className="mt-1 text-sm leading-relaxed text-cave-400">{description}</p>}
+            <h2 className="text-lg font-semibold text-bone-100">{title}</h2>
+            {description && <p className="mt-1 text-sm leading-relaxed text-ink-400">{description}</p>}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl px-2 py-1 text-sm text-cave-400 transition hover:bg-cave-800 hover:text-cave-100"
+            className="rounded-xl px-3 py-1.5 text-sm text-ink-400 transition hover:bg-ink-800 hover:text-bone-100"
           >
             fechar
           </button>

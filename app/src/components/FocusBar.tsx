@@ -16,15 +16,15 @@ export default function FocusBar({ root, projects, focus, onChange, onNewProject
   const known = current === "" || projects.some((project) => project.name === current);
 
   return (
-    <div className="flex items-center gap-2 border-b border-cave-800 bg-cave-900/60 px-3 py-2">
+    <div className="flex items-center gap-2 border-b border-ink-800 bg-ink-900/60 px-3 py-2">
       <label className="min-w-0 flex-1">
         <span className="sr-only">Projeto em foco</span>
-        <div className="flex items-center gap-2 rounded-xl border border-cave-700 bg-cave-950 px-3">
-          <span className="text-xs text-cave-500">foco</span>
+        <div className="flex items-center gap-2 rounded-xl border border-ink-700 bg-ink-950 px-3">
+          <span className="text-xs text-ink-500">foco</span>
           <select
             value={known ? current : ""}
             onChange={(event) => onChange(event.target.value)}
-            className="h-10 min-w-0 flex-1 truncate bg-transparent text-sm text-cave-100 outline-none"
+            className="h-10 min-w-0 flex-1 truncate bg-transparent text-sm text-bone-100 outline-none"
           >
             <option value="">{root.split(/[\\/]/).pop() ?? "raiz"} (raiz)</option>
             {projects.map((project) => (
@@ -41,7 +41,7 @@ export default function FocusBar({ root, projects, focus, onChange, onNewProject
         type="button"
         onClick={onNewProject}
         aria-label="Criar novo projeto"
-        className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cave-700 bg-cave-900 text-cave-300 transition hover:border-ember/60 hover:text-ember"
+        className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ink-700 bg-ink-900 text-bone-300 transition hover:border-brass-500/60 hover:text-brass-500"
       >
         <PlusIcon />
       </button>
@@ -50,7 +50,7 @@ export default function FocusBar({ root, projects, focus, onChange, onNewProject
         type="button"
         onClick={onTrash}
         aria-label="Mover projeto para a lixeira"
-        className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-cave-700 bg-cave-900 text-cave-300 transition hover:border-red-500/50 hover:text-red-300"
+        className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ink-700 bg-ink-900 text-bone-300 transition hover:border-red-500/50 hover:text-red-200"
       >
         <TrashIcon />
       </button>

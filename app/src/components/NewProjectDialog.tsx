@@ -35,7 +35,7 @@ export default function NewProjectDialog({ onClose, onCreated }: Props) {
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-2 block text-sm text-cave-300">Nome da pasta</span>
+          <span className="mb-2 block text-sm text-bone-300">Nome da pasta</span>
           <input
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -44,15 +44,15 @@ export default function NewProjectDialog({ onClose, onCreated }: Props) {
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 px-4 font-mono text-base text-cave-100 outline-none focus:border-ember/60"
+            className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 px-4 font-mono text-base text-bone-100 outline-none focus:border-brass-500/60"
           />
-          <span className="mt-2 block text-xs text-cave-500">
+          <span className="mt-2 block text-xs text-ink-500">
             Letras, números, ponto, hífen e sublinhado.
           </span>
         </label>
 
         <fieldset>
-          <legend className="mb-2 block text-sm text-cave-300">Template</legend>
+          <legend className="mb-2 block text-sm text-bone-300">Template</legend>
           <div className="grid grid-cols-2 gap-2">
             {(["empty", "node"] as const).map((option) => (
               <button
@@ -61,8 +61,8 @@ export default function NewProjectDialog({ onClose, onCreated }: Props) {
                 onClick={() => setTemplate(option)}
                 className={`h-11 rounded-xl border text-sm transition ${
                   template === option
-                    ? "border-ember bg-ember/10 text-ember"
-                    : "border-cave-700 bg-cave-950 text-cave-300"
+                    ? "border-brass-500 bg-brass-500/10 text-brass-500"
+                    : "border-ink-700 bg-ink-950 text-bone-300"
                 }`}
               >
                 {option === "empty" ? "vazio" : "node"}
@@ -72,7 +72,7 @@ export default function NewProjectDialog({ onClose, onCreated }: Props) {
         </fieldset>
 
         {error && (
-          <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
             {error}
           </p>
         )}
@@ -81,7 +81,7 @@ export default function NewProjectDialog({ onClose, onCreated }: Props) {
           type="button"
           onClick={create}
           disabled={!name.trim() || busy}
-          className="h-12 w-full rounded-xl bg-ember font-semibold text-cave-950 transition enabled:hover:bg-ember-dim disabled:opacity-40"
+          className="h-12 w-full rounded-xl bg-brass-500 font-semibold text-ink-950 transition enabled:hover:bg-brass-600 disabled:opacity-40"
         >
           {busy ? "criando…" : "Criar projeto"}
         </button>

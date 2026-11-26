@@ -33,18 +33,18 @@ export default function MessageList({ messages, pending, session, busy }: Props)
   if (empty) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10">
-        <div className="flex size-16 items-center justify-center rounded-3xl border border-cave-700 bg-cave-900 text-ember">
+        <div className="flex size-16 items-center justify-center rounded-3xl border border-ink-700 bg-ink-900 text-brass-400 shadow-[inset_0_1px_0_rgba(241,236,228,0.04)]">
           <MicIcon className="size-7" />
         </div>
         <div className="max-w-xs space-y-3 text-center">
-          <p className="text-base font-medium text-cave-200">Comece ditando.</p>
-          <p className="text-sm leading-relaxed text-cave-400">
+          <p className="text-lg font-medium tracking-tight text-bone-100">Comece ditando.</p>
+          <p className="text-sm leading-relaxed text-ink-400">
             Toque no microfone do app ou use o teclado. O texto vem pra cá e eu executo no seu PC.
           </p>
         </div>
         {session && (
-          <p className="text-[11px] text-cave-500">
-            sessão <span className="font-mono text-cave-400">{session.id.slice(0, 12)}</span>
+          <p className="font-mono text-[11px] text-ink-500">
+            sessão <span className="text-ink-400">{session.id.slice(0, 12)}</span>
           </p>
         )}
       </div>
@@ -68,21 +68,21 @@ export default function MessageList({ messages, pending, session, busy }: Props)
 
       {pending.map((text) => (
         <div key={`pending-${text}`} className="flex justify-end">
-          <div className="max-w-[85%] rounded-2xl rounded-br-md bg-ember px-4 py-2.5 text-sm text-cave-950 opacity-80">
+          <div className="max-w-[85%] rounded-2xl rounded-br-md bg-brass-500 px-4 py-2.5 text-sm text-ink-950 opacity-80">
             <p className="whitespace-pre-wrap break-words">{text}</p>
-            <p className="mt-1 text-[10px] text-cave-950/60">enviando…</p>
+            <p className="mt-1 text-[10px] text-ink-950/65">enviando…</p>
           </div>
         </div>
       ))}
 
       {showThinking && (
         <div className="flex justify-start" aria-live="polite">
-          <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-cave-800 bg-cave-900 px-4 py-3 text-sm text-cave-300">
+          <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-ink-700 bg-ink-900 px-4 py-3 text-sm text-bone-300">
             <div className="flex items-center gap-2">
               <span className="inline-flex gap-1">
-                <span className="size-1.5 animate-pulse rounded-full bg-ember" />
-                <span className="size-1.5 animate-pulse rounded-full bg-ember [animation-delay:150ms]" />
-                <span className="size-1.5 animate-pulse rounded-full bg-ember [animation-delay:300ms]" />
+                <span className="size-1.5 animate-pulse rounded-full bg-brass-400" />
+                <span className="size-1.5 animate-pulse rounded-full bg-brass-400 [animation-delay:150ms]" />
+                <span className="size-1.5 animate-pulse rounded-full bg-brass-400 [animation-delay:300ms]" />
               </span>
               <span>Pensando…</span>
             </div>
@@ -97,10 +97,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-ember px-4 py-2.5 text-sm text-cave-950">
+        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-brass-500 px-4 py-2.5 text-sm text-ink-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
           <p className="whitespace-pre-wrap break-words">{message.text}</p>
           {message.createdAt && (
-            <p className="mt-1 text-right text-[10px] text-cave-950/60">{formatTime(message.createdAt)}</p>
+            <p className="mt-1 text-right text-[10px] text-ink-950/65">{formatTime(message.createdAt)}</p>
           )}
         </div>
       </div>
@@ -110,7 +110,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.role === "system") {
     return (
       <div className="flex justify-center">
-        <div className="max-w-[92%] rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2 text-center text-xs leading-relaxed text-red-300">
+        <div className="max-w-[92%] rounded-xl border border-record-500/30 bg-record-500/10 px-4 py-2 text-center text-xs leading-relaxed text-red-200">
           {message.error ?? message.text}
         </div>
       </div>
@@ -119,7 +119,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
   return (
     <div className="flex justify-start">
-      <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-cave-800 bg-cave-900 px-4 py-3 text-sm text-cave-100">
+      <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-ink-700 bg-ink-900 px-4 py-3 text-sm text-bone-100">
         {message.text && (
           <div className="markdown break-words leading-relaxed">
             <ReactMarkdown
@@ -127,7 +127,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               components={{
                 p: ({ children }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap">{children}</p>,
                 a: ({ href, children }) => (
-                  <a href={href} target="_blank" rel="noreferrer" className="text-ember underline break-all">
+                  <a href={href} target="_blank" rel="noreferrer" className="text-brass-500 underline break-all">
                     {children}
                   </a>
                 ),
@@ -137,35 +137,35 @@ function MessageBubble({ message }: { message: ChatMessage }) {
                 code: ({ className, children }) => {
                   const block = /language-/.test(className ?? "");
                   if (block) {
-                    return <code className="block whitespace-pre-wrap font-mono text-[12px] text-cave-100">{children}</code>;
+                    return <code className="block whitespace-pre-wrap font-mono text-[12px] text-bone-100">{children}</code>;
                   }
                   return (
-                    <code className="rounded bg-cave-800 px-1 py-0.5 font-mono text-[12px] text-cave-100">
+                    <code className="rounded bg-ink-800 px-1 py-0.5 font-mono text-[12px] text-bone-100">
                       {children}
                     </code>
                   );
                 },
                 pre: ({ children }) => (
-                  <pre className="mb-2 overflow-x-auto rounded-lg border border-cave-700 bg-cave-950 p-3 last:mb-0">
+                  <pre className="mb-2 overflow-x-auto rounded-lg border border-ink-700 bg-ink-950 p-3 last:mb-0">
                     {children}
                   </pre>
                 ),
                 blockquote: ({ children }) => (
-                  <blockquote className="mb-2 border-l-2 border-cave-600 pl-3 text-cave-300 last:mb-0">
+                  <blockquote className="mb-2 border-l-2 border-ink-700 pl-3 text-bone-300 last:mb-0">
                     {children}
                   </blockquote>
                 ),
                 h1: ({ children }) => <h1 className="mb-2 text-base font-semibold last:mb-0">{children}</h1>,
                 h2: ({ children }) => <h2 className="mb-2 text-sm font-semibold last:mb-0">{children}</h2>,
                 h3: ({ children }) => <h3 className="mb-1 text-sm font-semibold last:mb-0">{children}</h3>,
-                hr: () => <hr className="my-2 border-cave-700" />,
+                hr: () => <hr className="my-2 border-ink-700" />,
                 table: ({ children }) => (
                   <div className="mb-2 overflow-x-auto last:mb-0">
                     <table className="min-w-full border-collapse text-xs">{children}</table>
                   </div>
                 ),
-                th: ({ children }) => <th className="border border-cave-700 bg-cave-850 px-2 py-1 text-left">{children}</th>,
-                td: ({ children }) => <td className="border border-cave-700 px-2 py-1 align-top">{children}</td>,
+                th: ({ children }) => <th className="border border-ink-700 bg-ink-850 px-2 py-1 text-left">{children}</th>,
+                td: ({ children }) => <td className="border border-ink-700 px-2 py-1 align-top">{children}</td>,
               }}
             >
               {message.text}
@@ -173,7 +173,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
         {message.error && (
-          <p className="mt-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs leading-relaxed text-red-300">
+          <p className="mt-1 rounded-lg border border-record-500/30 bg-record-500/10 px-3 py-2 text-xs leading-relaxed text-red-200">
             {message.error}
           </p>
         )}
@@ -182,7 +182,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {message.tools.map((tool, index) => (
               <span
                 key={`${tool}-${index}`}
-                className="rounded-md border border-cave-700 bg-cave-850 px-2 py-0.5 font-mono text-[10px] text-cave-400"
+                className="rounded-md border border-ink-700 bg-ink-850 px-2 py-0.5 font-mono text-[10px] text-ink-400"
               >
                 {tool}
               </span>
@@ -190,7 +190,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           </div>
         )}
         {message.createdAt && (
-          <p className="mt-1 text-[10px] text-cave-500">{formatTime(message.createdAt)}</p>
+          <p className="mt-1 font-mono text-[10px] text-ink-500">{formatTime(message.createdAt)}</p>
         )}
       </div>
     </div>

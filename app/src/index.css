@@ -1,17 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cave-950: #080c11;
-  --color-cave-900: #0d131b;
-  --color-cave-850: #111925;
-  --color-cave-800: #182231;
-  --color-cave-700: #243244;
-  --color-cave-500: #4d6180;
-  --color-cave-400: #7e91a8;
-  --color-cave-300: #a7b6c8;
-  --color-cave-100: #e9eff7;
-  --color-ember: #f5c451;
-  --color-ember-dim: #b98f2f;
+  --color-ink-950: #121416;
+  --color-ink-900: #1a1d20;
+  --color-ink-850: #1f2327;
+  --color-ink-800: #252a2f;
+  --color-ink-700: #364047;
+  --color-ink-500: #6b737b;
+  --color-ink-400: #8d949b;
+  --color-bone-300: #b5babf;
+  --color-bone-200: #d8d2c8;
+  --color-bone-100: #f1ece4;
+  --color-brass-400: #dda84a;
+  --color-brass-500: #c98b2f;
+  --color-brass-600: #a86f1e;
+  --color-record-500: #d95c4a;
+  --color-ok-500: #6f9b7a;
+  --color-info-500: #7fa6c7;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
 @layer base {
@@ -21,9 +28,30 @@
   }
 
   body {
-    @apply bg-cave-950 text-cave-100 antialiased;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    @apply bg-ink-950 text-bone-100 antialiased;
+    font-family: var(--font-sans);
     min-height: 100%;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-brass-500) 35%, transparent);
+    color: var(--color-bone-100);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brass-500);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   * {
