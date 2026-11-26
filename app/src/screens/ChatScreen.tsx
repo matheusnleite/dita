@@ -425,7 +425,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
                   }}
                   className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
                 >
-                  <span className="block truncate px-4">Modelo ? {modelLabel}</span>
+                  <span className="block truncate px-4">Modelo · {modelLabel}</span>
                 </button>
                 <button
                   type="button"
@@ -433,7 +433,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
                   className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
                 >
                   <span className="block truncate px-4">
-                    Ditado ? {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
+                    Ditado · {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
                   </span>
                 </button>
               </div>
@@ -481,7 +481,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
                   className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
                 >
                   <span className="block truncate px-4">
-                    Notifica??es{pushStatus ? ` ? ${pushStatus}` : ""}
+                    Notificações{pushStatus ? ` · ${pushStatus}` : ""}
                   </span>
                 </button>
                 <button
