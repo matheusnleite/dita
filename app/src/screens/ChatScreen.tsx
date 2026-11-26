@@ -8,7 +8,7 @@ import NewProjectDialog from "../components/NewProjectDialog.js";
 import SessionsDialog from "../components/SessionsDialog.js";
 import Sheet from "../components/Sheet.js";
 import TrashDialog from "../components/TrashDialog.js";
-import { MenuIcon } from "../components/icons.js";
+import { ChevronDownIcon, SettingsIcon } from "../components/icons.js";
 import { UnauthorizedError, api, subscribe } from "../lib/api.js";
 import { setupPush } from "../lib/push.js";
 import { errorLabel, relativeFocus, sortProjects } from "../lib/format.js";
@@ -48,7 +48,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
   const [online, setOnline] = useState(false);
   const [pending, setPending] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [busy, setBusy] = useState(false);
   const [models, setModels] = useState<ModelOption[]>([]);
@@ -149,7 +149,8 @@ export default function ChatScreen({ onSignedOut }: Props) {
 
   function newSession() {
     setBusy(true);
-    setMenuOpen(false);
+    setSettingsOpen(false);
+    setDialog(null);
     void guard(async () => {
       await api.newSession();
       setPending([]);
@@ -212,7 +213,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
   }
 
   function signOut() {
-    setMenuOpen(false);
+    setSettingsOpen(false);
     void api.logout().finally(onSignedOut);
   }
 
@@ -251,33 +252,60 @@ export default function ChatScreen({ onSignedOut }: Props) {
       model.modelID === selectedModel.modelID,
   );
   const modelLabel = currentModel?.name ?? selectedModel?.modelID ?? "padrão";
+  const sessionLabel = snapshot.session?.title?.trim() || "Nova conversa";
 
   return (
     <div className="flex h-dvh flex-col bg-ink-950">
-      <header className="safe-top flex items-center gap-3 border-b border-ink-800 bg-ink-950/92 px-4 pb-3 backdrop-blur">
-        <div className="flex items-center gap-2">
-          <span className="size-2 rounded-full bg-brass-500" aria-hidden="true" />
-          <h1 className="text-xl font-semibold tracking-tight text-bone-100">dita</h1>
+      <header className="safe-top border-b border-ink-800 bg-ink-950/92 px-4 pb-3 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="size-2 shrink-0 rounded-full bg-brass-500" aria-hidden="true" />
+            <h1 className="text-xl font-semibold tracking-tight text-bone-100">dita</h1>
+            <span
+              className={`hidden items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] sm:flex ${
+                online
+                  ? "border-ok-500/30 bg-ok-500/10 text-emerald-200"
+                  : "border-ink-700 bg-ink-900 text-ink-400"
+              }`}
+            >
+              <span className={`size-1.5 rounded-full ${online ? "bg-ok-500" : "bg-ink-500"}`} />
+              {online ? "online" : "reconectando"}
+            </span>
+          </div>
+
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDialog("sessions")}
+              aria-label="Abrir sessões"
+              className="flex h-10 min-w-0 max-w-[12rem] items-center gap-2 rounded-xl border border-ink-700 bg-ink-900/70 px-3 text-sm text-bone-100 transition hover:border-brass-500/40"
+            >
+              <span className="truncate">{sessionLabel}</span>
+              <ChevronDownIcon className="size-4 shrink-0 text-ink-400" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Ajustes"
+              className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ink-700 bg-ink-900/60 text-bone-300 transition hover:border-brass-500/40 hover:text-bone-100"
+            >
+              <SettingsIcon />
+            </button>
+          </div>
         </div>
-        <span
-          className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
-            online
-              ? "border-ok-500/30 bg-ok-500/10 text-emerald-200"
-              : "border-ink-700 bg-ink-900 text-ink-400"
-          }`}
-        >
-          <span className={`size-1.5 rounded-full ${online ? "bg-ok-500" : "bg-ink-500"}`} />
-          {online ? "online" : "reconectando"}
-        </span>
-        <span className="ml-auto max-w-[38%] truncate font-mono text-[11px] text-ink-400">{focusLabel}</span>
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          aria-label="Menu"
-          className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ink-700 bg-ink-900/60 text-bone-300 transition hover:border-brass-500/40 hover:text-bone-100"
-        >
-          <MenuIcon />
-        </button>
+        <div className="mt-2 flex items-center gap-2 sm:hidden">
+          <span
+            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] ${
+              online
+                ? "border-ok-500/30 bg-ok-500/10 text-emerald-200"
+                : "border-ink-700 bg-ink-900 text-ink-400"
+            }`}
+          >
+            <span className={`size-1.5 rounded-full ${online ? "bg-ok-500" : "bg-ink-500"}`} />
+            {online ? "online" : "reconectando"}
+          </span>
+          <span className="min-w-0 truncate font-mono text-[11px] text-ink-400">{focusLabel}</span>
+        </div>
       </header>
 
       <FocusBar
@@ -378,102 +406,98 @@ export default function ChatScreen({ onSignedOut }: Props) {
         dictationMode={dictationMode}
       />
 
-      {menuOpen && (
+            {settingsOpen && (
         <Sheet
-          title="dita"
-          description={
-            snapshot.session
-              ? `${snapshot.session.title || "Nova conversa"} · ${snapshot.messages.length} mensagens`
-              : "nenhuma sessão ainda"
-          }
-          onClose={() => setMenuOpen(false)}
+          title="Ajustes"
+          description="Modelo, ditado, projetos e dispositivo."
+          onClose={() => setSettingsOpen(false)}
         >
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={toggleDictationMode}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="block truncate px-4">
-                Ditado · {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={enablePush}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="block truncate px-4">
-                Notificações{pushStatus ? ` · ${pushStatus}` : ""}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                setDialog("model");
-                void refreshModels();
-              }}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="block truncate px-4">Modelo · {modelLabel}</span>
-            </button>
-            <button
-              type="button"
-              onClick={newSession}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="px-4">Nova sessão (contexto limpo)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                setDialog("sessions");
-              }}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="px-4">Sessões</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                setDialog("new-project");
-              }}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="px-4">Criar projeto</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                setDialog("trash");
-              }}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-red-500/50"
-            >
-              <span className="px-4">Mover projeto para a lixeira</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => void refreshProjects()}
-              className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
-            >
-              <span className="px-4">Atualizar projetos</span>
-            </button>
-            <button
-              type="button"
-              onClick={signOut}
-              className="h-12 w-full rounded-xl border border-ink-800 bg-transparent text-left text-sm text-ink-400 transition hover:text-bone-100"
-            >
-              <span className="px-4">Sair</span>
-            </button>
+          <div className="space-y-6">
+            <section>
+              <p className="mb-2 px-1 text-xs font-medium text-ink-400">Conversa</p>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setDialog("model");
+                    void refreshModels();
+                  }}
+                  className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
+                >
+                  <span className="block truncate px-4">Modelo ? {modelLabel}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleDictationMode}
+                  className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
+                >
+                  <span className="block truncate px-4">
+                    Ditado ? {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
+                  </span>
+                </button>
+              </div>
+            </section>
+
+            <section>
+              <p className="mb-2 px-1 text-xs font-medium text-ink-400">Projetos</p>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setDialog("new-project");
+                  }}
+                  className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
+                >
+                  <span className="px-4">Criar projeto</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setDialog("trash");
+                  }}
+                  className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-red-500/50"
+                >
+                  <span className="px-4">Mover projeto para a lixeira</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void refreshProjects()}
+                  className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
+                >
+                  <span className="px-4">Atualizar projetos</span>
+                </button>
+              </div>
+            </section>
+
+            <section>
+              <p className="mb-2 px-1 text-xs font-medium text-ink-400">Dispositivo</p>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={enablePush}
+                  className="h-12 w-full rounded-xl border border-ink-700 bg-ink-950 text-left text-sm text-bone-100 transition hover:border-brass-500/50"
+                >
+                  <span className="block truncate px-4">
+                    Notifica??es{pushStatus ? ` ? ${pushStatus}` : ""}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="h-12 w-full rounded-xl border border-ink-800 bg-transparent text-left text-sm text-ink-400 transition hover:text-bone-100"
+                >
+                  <span className="px-4">Sair</span>
+                </button>
+              </div>
+            </section>
           </div>
         </Sheet>
       )}
 
-      {dialog === "new-project" && (
+{dialog === "new-project" && (
         <NewProjectDialog onClose={() => setDialog(null)} onCreated={createdProject} />
       )}
 
@@ -501,6 +525,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
             setSnapshot((current) => ({ ...current, session }));
             setPending([]);
           }}
+          onNewSession={newSession}
         />
       )}
     </div>

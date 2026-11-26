@@ -9,9 +9,10 @@ type Props = {
   currentId: string | null;
   onClose: () => void;
   onSelect: (session: { id: string; directory: string; createdAt: number; title?: string }) => void;
+  onNewSession: () => void;
 };
 
-export default function SessionsDialog({ currentId, onClose, onSelect }: Props) {
+export default function SessionsDialog({ currentId, onClose, onSelect, onNewSession }: Props) {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +69,15 @@ export default function SessionsDialog({ currentId, onClose, onSelect }: Props) 
   }
 
   return (
-    <Sheet title="Sessões" description="Sessões salvas no OpenCode. Abrir troca a conversa atual." onClose={onClose}>
+    <Sheet title="Sessões" description="Troque de conversa ou comece uma nova com contexto limpo." onClose={onClose}>
+      <button
+        type="button"
+        onClick={onNewSession}
+        className="mb-4 h-12 w-full rounded-xl bg-brass-500 px-4 text-left text-sm font-semibold text-ink-950 transition hover:bg-brass-600"
+      >
+        Nova sessão
+      </button>
+
       {loading && <p className="px-1 py-6 text-center text-sm text-ink-400">carregando sessões…</p>}
       {error && (
         <p role="alert" className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -76,7 +85,7 @@ export default function SessionsDialog({ currentId, onClose, onSelect }: Props) 
         </p>
       )}
       {!loading && (
-        <ul className="-mx-1 max-h-[55vh] space-y-2 overflow-y-auto px-1">
+        <ul className="-mx-1 max-h-[50vh] space-y-2 overflow-y-auto px-1">
           {sessions.map((session) => {
             const current = session.id === currentId;
             return (
