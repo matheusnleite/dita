@@ -16,6 +16,14 @@ export type OpenCodeSession = {
   directory?: string;
 };
 
+export type ModelOption = {
+  providerID: string;
+  modelID: string;
+  name: string;
+  free: boolean;
+  status?: string;
+};
+
 const basicAuth =
   "Basic " + Buffer.from(`${OPEN_CODE_USER}:${config.opencodePassword}`).toString("base64");
 
@@ -122,10 +130,18 @@ function unwrap<T>(raw: unknown): T {
   return raw as T;
 }
 
-export async function createSession(directory: string, title: string): Promise<OpenCodeSession> {
+export async function createSession(
+  directory: string,
+  title: string,
+  model?: { providerID: string; modelID: string } | null,
+): Promise<OpenCodeSession> {
   const raw = await request<unknown>("/api/session", {
     method: "POST",
-    body: JSON.stringify({ title, location: { directory } }),
+    body: JSON.stringify({
+      title,
+      location: { directory },
+      ...(model ? { model: { providerID: model.providerID, id: model.modelID } } : {}),
+    }),
   });
   const session = unwrap<OpenCodeSession>(raw);
   if (!session?.id) throw new Error("OpenCode não devolveu o id da sessão criada");
@@ -244,6 +260,60 @@ export async function messages(sessionId: string): Promise<ChatMessage[]> {
     `/api/session/${encodeURIComponent(sessionId)}/message`,
   );
   return normalizeMessages(raw);
+}
+
+export async function setSessionModel(
+  sessionId: string,
+  providerID: string,
+  modelID: string,
+): Promise<void> {
+  await request(`/api/session/${encodeURIComponent(sessionId)}/model`, {
+    method: "POST",
+    body: JSON.stringify({ model: { providerID, id: modelID } }),
+  });
+}
+
+type RawModel = {
+  providerID?: string;
+  modelID?: string;
+  name?: string;
+  enabled?: boolean;
+  status?: string;
+};
+
+export function normalizeModels(raw: unknown): ModelOption[] {
+  const data = unwrap<unknown>(raw);
+  const list = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown } | undefined)?.data as unknown);
+  if (!Array.isArray(list)) return [];
+
+  return (list as RawModel[])
+    .filter((model) => model.enabled !== false && model.providerID && model.modelID)
+    .map((model) => {
+      const providerID = model.providerID as string;
+      const modelID = model.modelID as string;
+      const name = model.name ?? modelID;
+      return {
+        providerID,
+        modelID,
+        name,
+        free: providerID === "opencode" || /free/i.test(name),
+        status: model.status,
+      };
+    })
+    .sort((a, b) => {
+      if (a.free !== b.free) return a.free ? -1 : 1;
+      if (a.providerID !== b.providerID) return a.providerID.localeCompare(b.providerID);
+      return a.name.localeCompare(b.name);
+    });
+}
+
+export async function listModels(directory: string): Promise<ModelOption[]> {
+  const query = new URLSearchParams({ types: "chat" });
+  query.set("location[directory]", directory);
+  const raw = await request<unknown>(`/api/model?${query.toString()}`);
+  return normalizeModels(raw);
 }
 
 export async function replyPermission(

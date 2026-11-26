@@ -13,9 +13,18 @@ export type Session = {
   createdAt: number;
 };
 
+export type ModelOption = {
+  providerID: string;
+  modelID: string;
+  name: string;
+  free: boolean;
+  status?: string;
+};
+
 export type Snapshot = {
   session: Session | null;
   focus: string | null;
+  model: { providerID: string; modelID: string } | null;
   messages: ChatMessage[];
 };
 

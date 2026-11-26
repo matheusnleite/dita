@@ -2,21 +2,22 @@ import { useCallback, useEffect, useState } from "react";
 import Composer from "../components/Composer.js";
 import FocusBar from "../components/FocusBar.js";
 import MessageList from "../components/MessageList.js";
+import ModelDialog from "../components/ModelDialog.js";
 import NewProjectDialog from "../components/NewProjectDialog.js";
 import Sheet from "../components/Sheet.js";
 import TrashDialog from "../components/TrashDialog.js";
 import { MenuIcon } from "../components/icons.js";
 import { UnauthorizedError, api, subscribe } from "../lib/api.js";
 import { errorLabel, relativeFocus, sortProjects } from "../lib/format.js";
-import type { Project, Snapshot } from "../lib/types.js";
+import type { ModelOption, Project, Snapshot } from "../lib/types.js";
 
 type Props = {
   onSignedOut: () => void;
 };
 
-type Dialog = "new-project" | "trash" | null;
+type Dialog = "new-project" | "trash" | "model" | null;
 
-const EMPTY: Snapshot = { session: null, focus: null, messages: [] };
+const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [] };
 
 export default function ChatScreen({ onSignedOut }: Props) {
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
@@ -28,6 +29,9 @@ export default function ChatScreen({ onSignedOut }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [busy, setBusy] = useState(false);
+  const [models, setModels] = useState<ModelOption[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
   const handleAuth = useCallback(
     (caught: unknown): boolean => {
@@ -50,11 +54,25 @@ export default function ChatScreen({ onSignedOut }: Props) {
     }
   }, [handleAuth]);
 
+  const refreshModels = useCallback(async () => {
+    setModelsLoading(true);
+    setModelsError(null);
+    try {
+      const result = await api.models();
+      setModels(result.models);
+    } catch (caught) {
+      if (!handleAuth(caught)) setModelsError(errorLabel(caught));
+    } finally {
+      setModelsLoading(false);
+    }
+  }, [handleAuth]);
+
   useEffect(() => {
     void refreshProjects();
+    void refreshModels();
     const stop = subscribe(setSnapshot, setOnline);
     return stop;
-  }, [refreshProjects]);
+  }, [refreshProjects, refreshModels]);
 
   useEffect(() => {
     setPending((current) =>
@@ -134,12 +152,28 @@ export default function ChatScreen({ onSignedOut }: Props) {
     });
   }
 
+  function selectModel(model: ModelOption) {
+    setDialog(null);
+    void guard(async () => {
+      const result = await api.setModel(model.providerID, model.modelID);
+      setSnapshot((current) => ({ ...current, model: result.model }));
+    });
+  }
+
   function signOut() {
     setMenuOpen(false);
     void api.logout().finally(onSignedOut);
   }
 
   const focusLabel = relativeFocus(snapshot.focus, root) || "raiz";
+  const selectedModel = snapshot.model;
+  const currentModel = models.find(
+    (model) =>
+      selectedModel &&
+      model.providerID === selectedModel.providerID &&
+      model.modelID === selectedModel.modelID,
+  );
+  const modelLabel = currentModel?.name ?? selectedModel?.modelID ?? "padrão";
 
   return (
     <div className="flex h-dvh flex-col bg-cave-950">
@@ -201,6 +235,17 @@ export default function ChatScreen({ onSignedOut }: Props) {
           <div className="space-y-2">
             <button
               type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                setDialog("model");
+                void refreshModels();
+              }}
+              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+            >
+              <span className="block truncate px-4">Modelo · {modelLabel}</span>
+            </button>
+            <button
+              type="button"
               onClick={newSession}
               className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
             >
@@ -250,6 +295,17 @@ export default function ChatScreen({ onSignedOut }: Props) {
 
       {dialog === "trash" && (
         <TrashDialog projects={projects} onClose={() => setDialog(null)} onTrashed={trashedProject} />
+      )}
+
+      {dialog === "model" && (
+        <ModelDialog
+          models={models}
+          current={snapshot.model}
+          loading={modelsLoading}
+          error={modelsError}
+          onClose={() => setDialog(null)}
+          onSelect={selectModel}
+        />
       )}
     </div>
   );

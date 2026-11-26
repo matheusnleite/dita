@@ -74,7 +74,7 @@ export default function LoginScreen({ onSuccess }: Props) {
         </form>
 
         <p className="mt-8 text-center text-xs leading-relaxed text-cave-500">
-          A senha fica em <code className="text-cave-400">~/.dita/credentials.json</code> no seu PC.
+          Acesso restrito. Apenas você.
         </p>
       </div>
     </main>

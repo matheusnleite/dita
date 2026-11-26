@@ -10,6 +10,7 @@ export type SessionState = {
 export type State = {
   session: SessionState | null;
   focus: string | null;
+  model: { providerID: string; modelID: string } | null;
   pushSubscriptions: unknown[];
   approvals: unknown[];
 };
@@ -17,6 +18,7 @@ export type State = {
 const EMPTY: State = {
   session: null,
   focus: null,
+  model: null,
   pushSubscriptions: [],
   approvals: [],
 };

@@ -20,8 +20,10 @@ import {
   type ChatMessage,
   createSession,
   ensureServer,
+  listModels,
   messages,
   sendPrompt,
+  setSessionModel,
   stopServer,
 } from "./opencode.js";
 import {
@@ -72,12 +74,12 @@ async function snapshot() {
       app.log.warn({ error }, "falha ao ler mensagens do OpenCode");
     }
   }
-  return { session, focus: state.focus, messages: list };
+  return { session, focus: state.focus, model: state.model, messages: list };
 }
 
 async function newSession(): Promise<State["session"]> {
   await ensureServer();
-  const created = await createSession(config.root, "dita");
+  const created = await createSession(config.root, "dita", state.model);
   state.session = { id: created.id, directory: config.root, createdAt: Date.now() };
   state.focus = null;
   saveState(state);
@@ -202,6 +204,52 @@ await app.register(async (api) => {
     }
   });
 
+  api.get("/api/models", async (_request, reply) => {
+    try {
+      await ensureServer();
+      return { models: await listModels(config.root) };
+    } catch (error) {
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/model", async (request, reply) => {
+    const body = (request.body ?? {}) as { providerID?: unknown; modelID?: unknown };
+    if (typeof body.providerID !== "string" || typeof body.modelID !== "string") {
+      return reply.code(400).send({ error: "invalid_model" });
+    }
+
+    try {
+      await ensureServer();
+      const models = await listModels(config.root);
+      const found = models.find(
+        (model) => model.providerID === body.providerID && model.modelID === body.modelID,
+      );
+      if (!found) return reply.code(400).send({ error: "model_not_found" });
+
+      state.model = { providerID: found.providerID, modelID: found.modelID };
+      saveState(state);
+
+      if (state.session) {
+        try {
+          await setSessionModel(state.session.id, found.providerID, found.modelID);
+        } catch (error) {
+          if (error instanceof OpenCodeError && error.status === 404) {
+            await newSession();
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      broadcast("snapshot", await snapshot());
+      return { model: state.model };
+    } catch (error) {
+      app.log.error({ error }, "falha ao trocar modelo");
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
   api.post("/api/prompt", async (request, reply) => {
     const body = (request.body ?? {}) as { text?: unknown; focus?: unknown };
     const text = typeof body.text === "string" ? body.text.trim() : "";
@@ -283,9 +331,6 @@ try {
   await app.listen({ host: config.host, port: config.port });
   app.log.info(`dita ouvindo em http://${config.host}:${config.port}`);
   app.log.info(`raiz de projetos: ${config.root}`);
-  if (config.generatedPassword) {
-    app.log.warn(`senha gerada: ${config.password}  (salva em ${path.join(config.dataDir, "credentials.json")})`);
-  }
 } catch (error) {
   app.log.error(error);
   process.exit(1);

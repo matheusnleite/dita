@@ -1,4 +1,4 @@
-import type { Project, Snapshot } from "./types.js";
+import type { ModelOption, Project, Snapshot } from "./types.js";
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -60,6 +60,15 @@ export const api = {
   },
   newSession() {
     return request<{ session: Snapshot["session"] }>("/api/session", { method: "POST" });
+  },
+  models() {
+    return request<{ models: ModelOption[] }>("/api/models");
+  },
+  setModel(providerID: string, modelID: string) {
+    return request<{ model: Snapshot["model"] }>("/api/model", {
+      method: "POST",
+      body: JSON.stringify({ providerID, modelID }),
+    });
   },
   setFocus(focus: string) {
     return request<{ focus: string | null }>("/api/focus", {

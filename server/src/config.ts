@@ -54,7 +54,6 @@ export const config = {
   ...credentials,
   opencodeUrl: process.env.OPENCODE_URL ?? "http://127.0.0.1:4096",
   manageOpencode: process.env.DITA_MANAGE_OPENCODE !== "false",
-  generatedPassword: !process.env.DITA_PASSWORD && !readStored().password,
 };
 
 export const OPEN_CODE_USER = "opencode";
