@@ -15,7 +15,7 @@
     "dev": "concurrently -n server,app -c blue,magenta \"npm -w server run dev\" \"npm -w app run dev\"",
     "build": "npm -w app run build && npm -w server run build",
     "start": "npm -w server run start",
-    "test": "npm -w server run test",
+    "test": "npm -w server run test && npm -w app run test",
     "test:watch": "npm -w server run test:watch",
     "check": "npm test && npm run build",
     "icons": "npm -w app run icons"

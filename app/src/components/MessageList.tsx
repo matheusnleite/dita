@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ChatMessage, Session } from "../lib/types.js";
 import { formatTime } from "../lib/format.js";
 import { MicIcon } from "./icons.js";
@@ -10,6 +11,20 @@ type Props = {
 
 export default function MessageList({ messages, pending, session }: Props) {
   const empty = messages.length === 0 && pending.length === 0;
+  const scroller = useRef<HTMLDivElement>(null);
+  const nearBottom = useRef(true);
+  const previousTotal = useRef(0);
+  const total = messages.length + pending.length;
+
+  useEffect(() => {
+    const element = scroller.current;
+    const grew = total > previousTotal.current;
+    previousTotal.current = total;
+    if (!element || !grew) return;
+    if (pending.length > 0 || nearBottom.current) {
+      element.scrollTop = element.scrollHeight;
+    }
+  }, [total, pending.length]);
 
   if (empty) {
     return (
@@ -36,7 +51,16 @@ export default function MessageList({ messages, pending, session }: Props) {
   }
 
   return (
-    <div className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+    <div
+      ref={scroller}
+      data-testid="message-scroller"
+      onScroll={(event) => {
+        const element = event.currentTarget;
+        nearBottom.current =
+          element.scrollHeight - element.scrollTop - element.clientHeight < 200;
+      }}
+      className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-3 py-4"
+    >
       {messages.map((message) => (
         <MessageBubble key={message.id} message={message} />
       ))}

@@ -13,6 +13,7 @@ Regras para agentes que trabalham neste repositório.
 ## Onde os testes vivem
 
 - `server/test/` — vitest, ambiente Node. Unitários de normalização, auth, projetos e rotas.
+- `app/src/**/*.test.tsx` — vitest com jsdom e Testing Library. Componentes e comportamento de tela.
 - Testes de regressão devem citar o sintoma no `describe` ou no `it` quando não for óbvio.
 
 ## Commits
