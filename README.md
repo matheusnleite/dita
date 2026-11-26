@@ -97,8 +97,17 @@ dita/
 
 - [x] **Fase 1** — Ponte, login, projetos, Sessão raiz, Foco, enviar texto, conversa em tempo real, seletor de modelo.
 - [x] **Fase 2** — ditado dentro do app (Web Speech API) com fallback.
-- [ ] **Fase 3** — transcrição no PC com `whisper.cpp`.
+- [x] **Fase 3** — transcrição no PC com Whisper local (`faster-whisper`) e fallback de navegador.
 - [ ] **Fase 4** — Web Push e tela de Aprovação para Ações de risco.
+
+## Transcrição local (Fase 3)
+
+```powershell
+winget install --id Gyan.FFmpeg.Essentials -e
+pip install faster-whisper
+```
+
+No app, menu **Ditado** alterna entre `PC (Whisper)` e `navegador`. No modo PC, o botão grava áudio, envia para a Ponte e o texto volta para o campo. Modelo padrão: `base` (`DITA_WHISPER_MODEL` no `.env`).
 
 ## Testes
 

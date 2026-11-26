@@ -11,6 +11,17 @@ import { UnauthorizedError, api, subscribe } from "../lib/api.js";
 import { errorLabel, relativeFocus, sortProjects } from "../lib/format.js";
 import type { ModelOption, Project, Snapshot } from "../lib/types.js";
 
+type DictationMode = "server" | "browser";
+const DICTATION_KEY = "dita:dictation-mode";
+
+function loadDictationMode(): DictationMode {
+  try {
+    return localStorage.getItem(DICTATION_KEY) === "browser" ? "browser" : "server";
+  } catch {
+    return "server";
+  }
+}
+
 type Props = {
   onSignedOut: () => void;
 };
@@ -32,6 +43,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
   const [models, setModels] = useState<ModelOption[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
+  const [dictationMode, setDictationMode] = useState<DictationMode>(loadDictationMode);
 
   const handleAuth = useCallback(
     (caught: unknown): boolean => {
@@ -160,6 +172,16 @@ export default function ChatScreen({ onSignedOut }: Props) {
     });
   }
 
+  function toggleDictationMode() {
+    const next: DictationMode = dictationMode === "server" ? "browser" : "server";
+    setDictationMode(next);
+    try {
+      localStorage.setItem(DICTATION_KEY, next);
+    } catch {
+      /* ignora */
+    }
+  }
+
   function signOut() {
     setMenuOpen(false);
     void api.logout().finally(onSignedOut);
@@ -220,7 +242,12 @@ export default function ChatScreen({ onSignedOut }: Props) {
 
       <MessageList messages={snapshot.messages} pending={pending} session={snapshot.session} />
 
-      <Composer onSend={send} onError={setError} disabled={busy} />
+      <Composer
+        onSend={send}
+        onError={setError}
+        disabled={busy}
+        dictationMode={dictationMode}
+      />
 
       {menuOpen && (
         <Sheet
@@ -233,6 +260,15 @@ export default function ChatScreen({ onSignedOut }: Props) {
           onClose={() => setMenuOpen(false)}
         >
           <div className="space-y-2">
+            <button
+              type="button"
+              onClick={toggleDictationMode}
+              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+            >
+              <span className="block truncate px-4">
+                Ditado · {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
+              </span>
+            </button>
             <button
               type="button"
               onClick={() => {

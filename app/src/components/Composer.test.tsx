@@ -31,16 +31,19 @@ class FakeRecognition {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   // @ts-expect-error test cleanup
   delete window.SpeechRecognition;
   // @ts-expect-error test cleanup
   delete window.webkitSpeechRecognition;
+  // @ts-expect-error test cleanup
+  delete window.MediaRecorder;
   FakeRecognition.instance = null;
 });
 
 describe("Composer ditado", () => {
   it("mostra fallback quando ditado não é suportado", () => {
-    render(<Composer onSend={vi.fn()} onError={vi.fn()} />);
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} dictationMode="browser" />);
     const mic = screen.getByRole("button", { name: "Iniciar ditado" });
     expect(mic.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(/ditado indisponível neste navegador/i)).toBeTruthy();
@@ -49,7 +52,7 @@ describe("Composer ditado", () => {
   it("inicia e para o ditado no toque", () => {
     // @ts-expect-error test mock
     window.SpeechRecognition = FakeRecognition;
-    render(<Composer onSend={vi.fn()} onError={vi.fn()} />);
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} dictationMode="browser" />);
 
     const mic = screen.getByRole("button", { name: "Iniciar ditado" });
     fireEvent.click(mic);
@@ -63,7 +66,7 @@ describe("Composer ditado", () => {
   it("coloca o texto final no campo de ditado", () => {
     // @ts-expect-error test mock
     window.SpeechRecognition = FakeRecognition;
-    render(<Composer onSend={vi.fn()} onError={vi.fn()} />);
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} dictationMode="browser" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Iniciar ditado" }));
     act(() => {
@@ -78,7 +81,7 @@ describe("Composer ditado", () => {
     // @ts-expect-error test mock
     window.SpeechRecognition = FakeRecognition;
     const onError = vi.fn();
-    render(<Composer onSend={vi.fn()} onError={onError} />);
+    render(<Composer onSend={vi.fn()} onError={onError} dictationMode="browser" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Iniciar ditado" }));
     FakeRecognition.instance?.onerror?.({ error: "not-allowed" });
@@ -86,5 +89,62 @@ describe("Composer ditado", () => {
     expect(onError).toHaveBeenCalledWith(
       "Microfone bloqueado. Libere o acesso nas permissões do navegador.",
     );
+  });
+
+  it("transcreve áudio no PC e coloca texto no campo", async () => {
+    class FakeRecorder {
+      static instance: FakeRecorder | null = null;
+      state: "inactive" | "recording" = "inactive";
+      mimeType = "audio/webm";
+      ondataavailable: ((event: { data: Blob }) => void) | null = null;
+      onstop: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      constructor(_stream: MediaStream, _opts?: unknown) {
+        FakeRecorder.instance = this;
+      }
+      start() {
+        this.state = "recording";
+      }
+      stop() {
+        this.state = "inactive";
+        this.ondataavailable?.({ data: new Blob(["audio"], { type: "audio/webm" }) });
+        this.onstop?.();
+      }
+      static isTypeSupported() {
+        return true;
+      }
+    }
+
+    // @ts-expect-error test mock
+    window.MediaRecorder = FakeRecorder;
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue({
+          getTracks: () => [{ stop: vi.fn() }],
+        }),
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ text: "olá do whisper" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    render(<Composer onSend={vi.fn()} onError={vi.fn()} dictationMode="server" />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Iniciar ditado" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Parar ditado" }));
+    });
+
+    expect(await screen.findByDisplayValue("olá do whisper")).toBeTruthy();
+    vi.unstubAllGlobals();
   });
 });

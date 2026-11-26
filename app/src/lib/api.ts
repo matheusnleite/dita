@@ -9,7 +9,10 @@ export class UnauthorizedError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body !== undefined) headers.set("content-type", "application/json");
+  const isForm = typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (init.body !== undefined && !isForm && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
 
   const response = await fetch(path, {
     credentials: "same-origin",
@@ -75,6 +78,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ focus }),
     });
+  },
+  transcribe(audio: Blob) {
+    const body = new FormData();
+    body.append("audio", audio, "ditado.webm");
+    return request<{ text: string }>("/api/transcribe", { method: "POST", body });
   },
   prompt(text: string, focus: string) {
     return request<{ ok: true }>("/api/prompt", {

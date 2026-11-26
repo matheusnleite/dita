@@ -1,7 +1,11 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { pipeline } from "node:stream/promises";
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import fastifyStatic from "@fastify/static";
+import multipart from "@fastify/multipart";
 import cookie from "@fastify/cookie";
 import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 
@@ -33,6 +37,7 @@ import {
   trashProject,
 } from "./projects.js";
 import { loadState, saveState, type State } from "./state.js";
+import { stopTranscriber, transcribeAudio } from "./transcribe.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const appDist = path.resolve(__dirname, "../../app/dist");
@@ -46,6 +51,12 @@ const app = Fastify({
 });
 
 await app.register(cookie);
+await app.register(multipart, {
+  limits: {
+    fileSize: 15 * 1024 * 1024,
+    files: 1,
+  },
+});
 
 async function snapshot() {
   const session = state.session;
@@ -254,6 +265,24 @@ await app.register(async (api) => {
       return reply.code(502).send({ error: (error as Error).message });
     }
   });
+
+  api.post("/api/transcribe", async (request, reply) => {
+    const file = await request.file();
+    if (!file) return reply.code(400).send({ error: "missing_audio" });
+
+    const ext = path.extname(file.filename || "") || ".webm";
+    const tmpPath = path.join(os.tmpdir(), `dita-audio-${randomUUID()}${ext}`);
+    try {
+      await pipeline(file.file, fs.createWriteStream(tmpPath));
+      const text = await transcribeAudio(tmpPath);
+      return { text };
+    } catch (error) {
+      app.log.error({ error }, "falha ao transcrever áudio");
+      return reply.code(502).send({ error: (error as Error).message });
+    } finally {
+      fs.promises.unlink(tmpPath).catch(() => undefined);
+    }
+  });
 });
 
 if (fs.existsSync(appDist)) {
@@ -277,6 +306,7 @@ try {
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, async () => {
+    stopTranscriber();
     stopServer();
     await app.close();
     process.exit(0);

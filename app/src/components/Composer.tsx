@@ -1,37 +1,70 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { MicIcon, SendIcon } from "./icons.js";
 import { useDictation } from "../lib/useDictation.js";
+import { useRecorder } from "../lib/useRecorder.js";
+import { api } from "../lib/api.js";
+import { errorLabel } from "../lib/format.js";
+
+type DictationMode = "server" | "browser";
 
 type Props = {
   onSend: (text: string) => void;
   onError: (message: string) => void;
   disabled?: boolean;
+  dictationMode: DictationMode;
 };
 
-export default function Composer({ onSend, onError, disabled = false }: Props) {
+export default function Composer({ onSend, onError, disabled = false, dictationMode }: Props) {
   const [value, setValue] = useState("");
+  const [transcribing, setTranscribing] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const canSend = value.trim().length > 0 && !disabled;
 
-  const { supported, listening, toggle } = useDictation({
-    onFinal: (text) => {
-      setValue((current) => {
-        const gap = current && !/\s$/.test(current) ? " " : "";
-        return current + gap + text;
-      });
-      requestAnimationFrame(() => {
-        const element = textarea.current;
-        if (!element) return;
-        element.style.height = "auto";
-        element.style.height = `${Math.min(element.scrollHeight, 160)}px`;
-      });
+  function appendText(text: string) {
+    const clean = text.trim();
+    if (!clean) return;
+    setValue((current) => {
+      const gap = current && !/\s$/.test(current) ? " " : "";
+      return current + gap + clean;
+    });
+    requestAnimationFrame(() => {
+      const element = textarea.current;
+      if (!element) return;
+      element.style.height = "auto";
+      element.style.height = `${Math.min(element.scrollHeight, 160)}px`;
+    });
+  }
+
+  const dictation = useDictation({
+    onFinal: appendText,
+    onError,
+  });
+
+  const recorder = useRecorder({
+    onRecorded: (audio) => {
+      setTranscribing(true);
+      void api
+        .transcribe(audio)
+        .then((result) => appendText(result.text))
+        .catch((error) => onError(errorLabel(error)))
+        .finally(() => setTranscribing(false));
     },
     onError,
   });
 
+  const serverMode = dictationMode === "server";
+  const active = serverMode ? recorder.recording : dictation.listening;
+  const supported = serverMode ? recorder.supported : dictation.supported;
+
+  function toggleMic() {
+    if (serverMode) recorder.toggle();
+    else dictation.toggle();
+  }
+
   function submit() {
     if (!canSend) return;
-    if (listening) toggle();
+    if (dictation.listening) dictation.toggle();
+    if (recorder.recording) recorder.stop();
     onSend(value.trim());
     setValue("");
     if (textarea.current) {
@@ -48,31 +81,34 @@ export default function Composer({ onSend, onError, disabled = false }: Props) {
     }
   }
 
+  let hint = "ditado indisponível neste navegador; use o teclado";
+  if (supported) {
+    if (transcribing) hint = "transcrevendo no PC…";
+    else if (active) hint = serverMode ? "gravando… toque para transcrever" : "ouvindo… toque para parar";
+    else hint = serverMode ? "toque no microfone para gravar" : "toque no microfone para ditar";
+  }
+
   return (
     <div className="border-t border-cave-800 bg-cave-900/80 px-3 pt-2 safe-bottom">
       <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-cave-500">
         <MicIcon className="size-3.5" />
-        {listening
-          ? "ouvindo… toque no microfone para parar"
-          : supported
-            ? "toque no microfone para ditar"
-            : "ditado indisponível neste navegador; use o teclado"}
+        {hint}
       </div>
 
       <div className="flex items-end gap-2 pb-1">
         <button
           type="button"
-          onClick={toggle}
-          disabled={!supported || disabled}
-          aria-label={listening ? "Parar ditado" : "Iniciar ditado"}
-          aria-pressed={listening}
+          onClick={toggleMic}
+          disabled={!supported || disabled || transcribing}
+          aria-label={active ? "Parar ditado" : "Iniciar ditado"}
+          aria-pressed={active}
           className={`flex size-12 shrink-0 items-center justify-center rounded-2xl border transition ${
-            listening
+            active
               ? "border-red-500/60 bg-red-500/15 text-red-300"
               : "border-cave-700 bg-cave-950 text-cave-300 hover:border-ember/50 hover:text-cave-100"
           } disabled:opacity-30`}
         >
-          <MicIcon className={listening ? "size-5 animate-pulse" : "size-5"} />
+          <MicIcon className={active || transcribing ? "size-5 animate-pulse" : "size-5"} />
         </button>
 
         <textarea
@@ -85,7 +121,7 @@ export default function Composer({ onSend, onError, disabled = false }: Props) {
             event.target.style.height = `${Math.min(event.target.scrollHeight, 160)}px`;
           }}
           onKeyDown={handleKeyDown}
-          placeholder={listening ? "Ouvindo…" : "Dite ou escreva…"}
+          placeholder={active ? "Ouvindo…" : "Dite ou escreva…"}
           enterKeyHint="send"
           className="max-h-40 min-h-12 flex-1 resize-none rounded-2xl border border-cave-700 bg-cave-950 px-4 py-3 text-base leading-relaxed text-cave-100 outline-none transition placeholder:text-cave-500 focus:border-ember/60 focus:ring-2 focus:ring-ember/15"
         />
