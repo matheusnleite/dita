@@ -63,6 +63,7 @@ export const config = {
   whisperModel: process.env.DITA_WHISPER_MODEL ?? "small",
   whisperDevice: process.env.DITA_WHISPER_DEVICE ?? "cpu",
   whisperCompute: process.env.DITA_WHISPER_COMPUTE ?? "int8",
+  whisperBeam: Math.max(1, Number(process.env.DITA_WHISPER_BEAM ?? 5) || 5),
 };
 
 export const OPEN_CODE_USER = "opencode";

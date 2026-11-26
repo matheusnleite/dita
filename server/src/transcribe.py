@@ -26,6 +26,7 @@ def main() -> None:
     model_name = sys.argv[1] if len(sys.argv) > 1 else "base"
     device = sys.argv[2] if len(sys.argv) > 2 else "cpu"
     compute_type = sys.argv[3] if len(sys.argv) > 3 else "int8"
+    beam_size = max(1, int(sys.argv[4])) if len(sys.argv) > 4 else 5
     model = WhisperModel(model_name, device=device, compute_type=compute_type)
 
     for line in sys.stdin:
@@ -40,7 +41,7 @@ def main() -> None:
                 audio,
                 language=language,
                 vad_filter=True,
-                beam_size=5,
+                beam_size=beam_size,
             )
             text = "".join(segment.text for segment in segments).strip()
             print(json.dumps({"ok": True, "text": text, "language": info.language}), flush=True)

@@ -80,7 +80,13 @@ async function ensureWorker(): Promise<void> {
     const script = resolveScript();
     const child = spawn(
       "python",
-      [script, config.whisperModel, config.whisperDevice, config.whisperCompute],
+      [
+        script,
+        config.whisperModel,
+        config.whisperDevice,
+        config.whisperCompute,
+        String(config.whisperBeam),
+      ],
       { stdio: ["pipe", "pipe", "pipe"], windowsHide: true },
     );
 
