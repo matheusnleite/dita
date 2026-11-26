@@ -93,8 +93,12 @@ dita/
 ## Testes
 
 ```powershell
-npm test
+npm test          # suíte completa
+npm run test:watch
+npm run check     # testes + build
 ```
+
+Regra do projeto: todo bug corrigido entra com teste de regressão. Veja `AGENTS.md`. CI roda em `.github/workflows/ci.yml`.
 
 ## Limitações conhecidas
 

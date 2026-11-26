@@ -16,6 +16,8 @@
     "build": "npm -w app run build && npm -w server run build",
     "start": "npm -w server run start",
     "test": "npm -w server run test",
+    "test:watch": "npm -w server run test:watch",
+    "check": "npm test && npm run build",
     "icons": "npm -w app run icons"
   },
   "devDependencies": {
