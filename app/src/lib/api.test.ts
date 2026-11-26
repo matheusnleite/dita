@@ -3,7 +3,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { POLL_INTERVAL_MS, subscribe } from "./api.js";
 import type { Snapshot } from "./types.js";
 
-const snapshot: Snapshot = { session: null, focus: null, model: null, messages: [], approvals: [], busy: false };
+const snapshot: Snapshot = {
+  session: null,
+  focus: null,
+  model: null,
+  messages: [],
+  approvals: [],
+  forms: [],
+  busy: false,
+};
 
 function respostaOk() {
   return new Response(JSON.stringify(snapshot), {

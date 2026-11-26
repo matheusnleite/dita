@@ -24,11 +24,14 @@ import {
   type ChatMessage,
   createSession,
   ensureServer,
+  listForms,
   listModels,
   listPermissions,
   listSessions,
   getSession,
   messages,
+  cancelForm,
+  replyForm,
   replyPermission,
   sendPrompt,
   setSessionModel,
@@ -66,34 +69,44 @@ await app.register(multipart, {
 });
 
 const notifiedApprovals = new Set<string>();
+const notifiedForms = new Set<string>();
+
+async function notifyPush(title: string, body: string) {
+  const subs = (state.pushSubscriptions ?? []) as PushSubscription[];
+  if (subs.length === 0) return;
+  const alive = await sendPush(subs, { title, body, url: "/" });
+  state.pushSubscriptions = alive;
+  saveState(state);
+}
 
 async function notifyApprovals(approvals: Array<{ id: string; action: string; resources: string[] }>) {
   const fresh = approvals.filter((item) => !notifiedApprovals.has(item.id));
   if (fresh.length === 0) return;
   for (const item of fresh) notifiedApprovals.add(item.id);
-
-  const subs = (state.pushSubscriptions ?? []) as PushSubscription[];
-  if (subs.length === 0) return;
-
   const first = fresh[0];
   if (!first) return;
   const body =
     fresh.length === 1
       ? `${first.action}${first.resources[0] ? ` · ${first.resources[0]}` : ""}`
       : `${fresh.length} ações aguardando aprovação`;
-  const alive = await sendPush(subs, {
-    title: "dita: aprovação necessária",
-    body,
-    url: "/",
-  });
-  state.pushSubscriptions = alive;
-  saveState(state);
+  await notifyPush("dita: aprovação necessária", body);
+}
+
+async function notifyForms(forms: Array<{ id: string; title: string }>) {
+  const fresh = forms.filter((item) => !notifiedForms.has(item.id));
+  if (fresh.length === 0) return;
+  for (const item of fresh) notifiedForms.add(item.id);
+  const first = fresh[0];
+  if (!first) return;
+  const body = fresh.length === 1 ? first.title : `${fresh.length} perguntas aguardando resposta`;
+  await notifyPush("dita: pergunta do agente", body);
 }
 
 async function snapshot() {
   const session = state.session;
   let list: ChatMessage[] = [];
   let approvals: Awaited<ReturnType<typeof listPermissions>> = [];
+  let forms: Awaited<ReturnType<typeof listForms>> = [];
   let busy = false;
   if (session) {
     try {
@@ -108,6 +121,11 @@ async function snapshot() {
     } catch {
       /* status indisponível */
     }
+    try {
+      forms = await listForms(session.id);
+    } catch (error) {
+      app.log.debug({ error }, "falha ao ler formulários do OpenCode");
+    }
   }
   try {
     approvals = await listPermissions(config.root);
@@ -115,7 +133,8 @@ async function snapshot() {
     app.log.debug({ error }, "falha ao ler permissões do OpenCode");
   }
   if (approvals.length > 0) void notifyApprovals(approvals);
-  return { session, focus: state.focus, model: state.model, messages: list, approvals, busy };
+  if (forms.length > 0) void notifyForms(forms);
+  return { session, focus: state.focus, model: state.model, messages: list, approvals, forms, busy };
 }
 
 async function newSession(): Promise<State["session"]> {
@@ -426,6 +445,60 @@ await app.register(async (api) => {
       return { ok: true };
     } catch (error) {
       app.log.error({ error }, "falha ao responder aprovação");
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/form/reply", async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      sessionID?: unknown;
+      formID?: unknown;
+      answer?: unknown;
+    };
+    if (
+      typeof body.sessionID !== "string" ||
+      typeof body.formID !== "string" ||
+      !body.answer ||
+      typeof body.answer !== "object" ||
+      Array.isArray(body.answer)
+    ) {
+      return reply.code(400).send({ error: "invalid_form_reply" });
+    }
+
+    try {
+      await replyForm(body.sessionID, body.formID, body.answer as Record<string, unknown>);
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof OpenCodeError && error.status === 409) {
+        return { ok: true, settled: true };
+      }
+      app.log.error({ error }, "falha ao responder formulário");
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/form/cancel", async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      sessionID?: unknown;
+      formID?: unknown;
+      message?: unknown;
+    };
+    if (typeof body.sessionID !== "string" || typeof body.formID !== "string") {
+      return reply.code(400).send({ error: "invalid_form_cancel" });
+    }
+
+    try {
+      await cancelForm(
+        body.sessionID,
+        body.formID,
+        typeof body.message === "string" ? body.message : undefined,
+      );
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof OpenCodeError && error.status === 409) {
+        return { ok: true, settled: true };
+      }
+      app.log.error({ error }, "falha ao cancelar formulário");
       return reply.code(502).send({ error: (error as Error).message });
     }
   });

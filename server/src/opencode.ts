@@ -32,6 +32,38 @@ export type PermissionRequest = {
   message?: string;
 };
 
+export type FormOption = { value: string; label: string; description?: string };
+
+export type FormField = {
+  key: string;
+  type: "string" | "number" | "integer" | "boolean" | "multiselect" | "external";
+  title?: string;
+  description?: string;
+  required?: boolean;
+  hidden?: boolean;
+  when?: Array<{ key: string; op: "eq" | "neq"; value: string | number | boolean }>;
+  options?: FormOption[];
+  custom?: boolean;
+  minItems?: number;
+  maxItems?: number;
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+  pattern?: string;
+  placeholder?: string;
+  format?: "email" | "uri" | "date" | "date-time";
+  default?: string | number | boolean | string[];
+  url?: string;
+};
+
+export type FormRequest = {
+  id: string;
+  sessionID: string;
+  title: string;
+  fields: FormField[];
+};
+
 const basicAuth =
   "Basic " + Buffer.from(`${OPEN_CODE_USER}:${config.opencodePassword}`).toString("base64");
 
@@ -370,6 +402,119 @@ export async function replyPermission(
     `/api/session/${encodeURIComponent(sessionId)}/permission/${encodeURIComponent(requestId)}/reply`,
     { method: "POST", body: JSON.stringify({ decision }) },
   );
+}
+
+function asFormValue(value: unknown): string | number | boolean | undefined {
+  if (typeof value === "string" || typeof value === "boolean") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  return undefined;
+}
+
+function normalizeFormField(raw: unknown): FormField | null {
+  if (!raw || typeof raw !== "object") return null;
+  const item = raw as Record<string, unknown>;
+  if (typeof item.key !== "string" || typeof item.type !== "string") return null;
+  const type = item.type;
+  if (!["string", "number", "integer", "boolean", "multiselect", "external"].includes(type)) return null;
+
+  const field: FormField = { key: item.key, type: type as FormField["type"] };
+  if (typeof item.title === "string" && item.title) field.title = item.title;
+  if (typeof item.description === "string" && item.description) field.description = item.description;
+  if (item.required === true) field.required = true;
+  if (item.hidden === true) field.hidden = true;
+  if (typeof item.placeholder === "string" && item.placeholder) field.placeholder = item.placeholder;
+  if (typeof item.pattern === "string" && item.pattern) field.pattern = item.pattern;
+  if (typeof item.custom === "boolean") field.custom = item.custom;
+  if (typeof item.minItems === "number") field.minItems = item.minItems;
+  if (typeof item.maxItems === "number") field.maxItems = item.maxItems;
+  if (typeof item.minLength === "number") field.minLength = item.minLength;
+  if (typeof item.maxLength === "number") field.maxLength = item.maxLength;
+  if (typeof item.minimum === "number") field.minimum = item.minimum;
+  if (typeof item.maximum === "number") field.maximum = item.maximum;
+  if (item.format === "email" || item.format === "uri" || item.format === "date" || item.format === "date-time") {
+    field.format = item.format;
+  }
+  if (typeof item.url === "string" && item.url) field.url = item.url;
+
+  if (Array.isArray(item.options)) {
+    field.options = item.options
+      .filter((opt): opt is Record<string, unknown> => Boolean(opt) && typeof opt === "object")
+      .filter((opt) => typeof opt.value === "string" && typeof opt.label === "string")
+      .map((opt) => ({
+        value: String(opt.value),
+        label: String(opt.label),
+        ...(typeof opt.description === "string" && opt.description ? { description: opt.description } : {}),
+      }));
+  }
+
+  if (Array.isArray(item.when)) {
+    field.when = item.when
+      .filter((w): w is Record<string, unknown> => Boolean(w) && typeof w === "object")
+      .map((w) => {
+        const value = asFormValue(w.value);
+        if (typeof w.key !== "string" || (w.op !== "eq" && w.op !== "neq") || value === undefined) return null;
+        return { key: w.key, op: w.op as "eq" | "neq", value };
+      })
+      .filter((w): w is { key: string; op: "eq" | "neq"; value: string | number | boolean } => w !== null);
+  }
+
+  const def = item.default;
+  if (
+    typeof def === "string" ||
+    typeof def === "boolean" ||
+    (typeof def === "number" && Number.isFinite(def)) ||
+    (Array.isArray(def) && def.every((v) => typeof v === "string"))
+  ) {
+    field.default = def as FormField["default"];
+  }
+
+  return field;
+}
+
+export function normalizeForms(raw: unknown): FormRequest[] {
+  const data = unwrap<unknown>(raw);
+  const list = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown } | undefined)?.data as unknown);
+  if (!Array.isArray(list)) return [];
+
+  return (list as Array<Record<string, unknown>>)
+    .filter((item) => typeof item?.id === "string" && typeof item?.sessionID === "string")
+    .map((item) => {
+      const fields = Array.isArray(item.fields)
+        ? item.fields.map(normalizeFormField).filter((f): f is FormField => f !== null)
+        : [];
+      return {
+        id: String(item.id),
+        sessionID: String(item.sessionID),
+        title: typeof item.title === "string" && item.title ? item.title : "Formulário",
+        fields,
+      };
+    })
+    .filter((item) => item.fields.length > 0);
+}
+
+export async function listForms(sessionId: string): Promise<FormRequest[]> {
+  const raw = await request<unknown>(`/api/session/${encodeURIComponent(sessionId)}/form`);
+  return normalizeForms(raw);
+}
+
+export async function replyForm(
+  sessionId: string,
+  formId: string,
+  answer: Record<string, unknown>,
+): Promise<void> {
+  await request(`/api/session/${encodeURIComponent(sessionId)}/form/${encodeURIComponent(formId)}/reply`, {
+    method: "POST",
+    body: JSON.stringify({ answer }),
+  });
+}
+
+export async function cancelForm(sessionId: string, formId: string, message?: string): Promise<void> {
+  const query = message ? `?message=${encodeURIComponent(message)}` : "";
+  await request(`/api/session/${encodeURIComponent(sessionId)}/form/${encodeURIComponent(formId)}${query}`, {
+    method: "DELETE",
+  });
 }
 
 export function stopServer(): void {

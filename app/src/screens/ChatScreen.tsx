@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Composer from "../components/Composer.js";
 import FocusBar from "../components/FocusBar.js";
+import FormCard from "../components/FormCard.js";
 import MessageList from "../components/MessageList.js";
 import ModelDialog from "../components/ModelDialog.js";
 import NewProjectDialog from "../components/NewProjectDialog.js";
@@ -30,7 +31,15 @@ type Props = {
 
 type Dialog = "new-project" | "trash" | "model" | "sessions" | null;
 
-const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [], approvals: [], busy: false };
+const EMPTY: Snapshot = {
+  session: null,
+  focus: null,
+  model: null,
+  messages: [],
+  approvals: [],
+  forms: [],
+  busy: false,
+};
 
 export default function ChatScreen({ onSignedOut }: Props) {
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
@@ -217,6 +226,22 @@ export default function ChatScreen({ onSignedOut }: Props) {
     });
   }
 
+  async function replyFormCard(sessionID: string, formID: string, answer: Record<string, unknown>) {
+    await api.replyForm(sessionID, formID, answer);
+    setSnapshot((current) => ({
+      ...current,
+      forms: current.forms.filter((item) => item.id !== formID),
+    }));
+  }
+
+  async function cancelFormCard(sessionID: string, formID: string) {
+    await api.cancelForm(sessionID, formID);
+    setSnapshot((current) => ({
+      ...current,
+      forms: current.forms.filter((item) => item.id !== formID),
+    }));
+  }
+
   const focusLabel = relativeFocus(snapshot.focus, root) || "raiz";
   const selectedModel = snapshot.model;
   const currentModel = models.find(
@@ -320,6 +345,24 @@ export default function ChatScreen({ onSignedOut }: Props) {
                   </button>
                 </div>
               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {snapshot.forms.length > 0 && (
+        <div className="border-t border-sky-500/30 bg-sky-500/10 px-3 py-3">
+          <p className="mb-2 text-xs font-medium text-sky-200">
+            Pergunta do agente ({snapshot.forms.length})
+          </p>
+          <div className="space-y-2">
+            {snapshot.forms.map((form) => (
+              <FormCard
+                key={form.id}
+                form={form}
+                onReply={replyFormCard}
+                onCancel={cancelFormCard}
+              />
             ))}
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeMessages, titleFromPrompt } from "../src/opencode.js";
+import { normalizeForms, normalizeMessages, titleFromPrompt } from "../src/opencode.js";
 
 const raw = {
   data: [
@@ -93,7 +93,7 @@ describe("normalizeMessages", () => {
 });
 
 describe("titleFromPrompt", () => {
-  it("usa o prompt como t�tulo curto", () => {
+  it("usa o prompt como t�tulo curto", () => {
     expect(titleFromPrompt("  corrigir bug   no login  ")).toBe("corrigir bug no login");
   });
 
@@ -104,5 +104,67 @@ describe("titleFromPrompt", () => {
 
   it("usa fallback para texto vazio", () => {
     expect(titleFromPrompt("   ")).toBe("Nova conversa");
+  });
+});
+
+describe("normalizeForms", () => {
+  it("normaliza campos, opções e condições", () => {
+    const forms = normalizeForms({
+      data: [
+        {
+          id: "frm_1",
+          sessionID: "ses_1",
+          title: "Escolha",
+          fields: [
+            {
+              key: "modo",
+              type: "string",
+              title: "Modo",
+              required: true,
+              options: [{ value: "a", label: "A", description: "desc" }],
+              custom: true,
+            },
+            {
+              key: "tags",
+              type: "multiselect",
+              options: [{ value: "x", label: "X" }],
+              minItems: 1,
+            },
+            {
+              key: "ok",
+              type: "boolean",
+              default: true,
+              when: [{ key: "modo", op: "eq", value: "a" }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(forms).toHaveLength(1);
+    expect(forms[0]).toMatchObject({
+      id: "frm_1",
+      sessionID: "ses_1",
+      title: "Escolha",
+    });
+    expect(forms[0]?.fields[0]).toMatchObject({
+      key: "modo",
+      type: "string",
+      required: true,
+      custom: true,
+      options: [{ value: "a", label: "A", description: "desc" }],
+    });
+    expect(forms[0]?.fields[2]?.when).toEqual([{ key: "modo", op: "eq", value: "a" }]);
+  });
+
+  it("ignora formulários sem id/sessão ou sem campos válidos", () => {
+    expect(
+      normalizeForms({
+        data: [
+          { id: "frm_x", title: "sem sessão", fields: [{ key: "a", type: "string" }] },
+          { id: "frm_y", sessionID: "ses", title: "vazio", fields: [{ nope: true }] },
+        ],
+      }),
+    ).toEqual([]);
   });
 });

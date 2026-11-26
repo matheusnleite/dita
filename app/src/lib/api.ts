@@ -105,6 +105,18 @@ export const api = {
       body: JSON.stringify({ sessionID, requestID, decision }),
     });
   },
+  replyForm(sessionID: string, formID: string, answer: Record<string, unknown>) {
+    return request<{ ok: true; settled?: boolean }>("/api/form/reply", {
+      method: "POST",
+      body: JSON.stringify({ sessionID, formID, answer }),
+    });
+  },
+  cancelForm(sessionID: string, formID: string, message?: string) {
+    return request<{ ok: true; settled?: boolean }>("/api/form/cancel", {
+      method: "POST",
+      body: JSON.stringify({ sessionID, formID, message }),
+    });
+  },
   pushPublicKey() {
     return request<{ publicKey: string }>("/api/push/public-key");
   },
