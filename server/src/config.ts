@@ -2,6 +2,11 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { loadEnvFile } from "./env.js";
+
+// .env na raiz do repositório. Variáveis já definidas no shell vencem.
+loadEnvFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".env"));
 
 const dataDir = process.env.DITA_DATA_DIR ?? path.join(os.homedir(), ".dita");
 fs.mkdirSync(dataDir, { recursive: true });

@@ -34,7 +34,17 @@ npm run build
 npm start       # Ponte serve o PWA em http://127.0.0.1:8787
 ```
 
-No primeiro boot, a Ponte gera a senha e grava em `~/.dita/credentials.json`. Para definir a sua, use `DITA_PASSWORD` (veja `.env.example`).
+No primeiro boot, a Ponte gera a senha e grava em `~/.dita/credentials.json`. Para definir a sua, edite `DITA_PASSWORD` no arquivo `.env` da raiz e reinicie. A Ponte lê o `.env` sozinha; variáveis definidas no shell vencem o arquivo.
+
+### Trocar a senha
+
+```powershell
+notepad .env                 # preencha DITA_PASSWORD=minha-senha
+$c = Get-NetTCPConnection -LocalPort 8787 -State Listen; Stop-Process -Id $c.OwningProcess -Force
+npm start
+```
+
+Enquanto `DITA_PASSWORD` estiver no `.env`, ela é a senha válida. Para invalidar cookies antigos, troque também `DITA_SESSION_SECRET`.
 
 ### Variáveis principais
 
