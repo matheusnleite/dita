@@ -30,7 +30,7 @@ type Props = {
 
 type Dialog = "new-project" | "trash" | "model" | "sessions" | null;
 
-const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [], approvals: [] };
+const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [], approvals: [], busy: false };
 
 export default function ChatScreen({ onSignedOut }: Props) {
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
@@ -270,7 +270,12 @@ export default function ChatScreen({ onSignedOut }: Props) {
         </div>
       )}
 
-      <MessageList messages={snapshot.messages} pending={pending} session={snapshot.session} />
+      <MessageList
+        messages={snapshot.messages}
+        pending={pending}
+        session={snapshot.session}
+        busy={snapshot.busy}
+      />
 
       {snapshot.approvals.length > 0 && (
         <div className="border-t border-amber-500/30 bg-amber-500/10 px-3 py-3">

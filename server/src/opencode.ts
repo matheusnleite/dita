@@ -178,6 +178,11 @@ export async function listSessions(directory: string): Promise<OpenCodeSession[]
   return Array.isArray(nested) ? nested : [];
 }
 
+export async function getSession(sessionId: string): Promise<{ time?: { busy?: number; idle?: number } }> {
+  const raw = await request<unknown>(`/api/session/${encodeURIComponent(sessionId)}`);
+  return unwrap<{ time?: { busy?: number; idle?: number } }>(raw);
+}
+
 export async function sendPrompt(sessionId: string, text: string): Promise<void> {
   await request(`/api/session/${encodeURIComponent(sessionId)}/prompt`, {
     method: "POST",

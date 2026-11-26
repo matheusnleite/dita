@@ -7,24 +7,26 @@ type Props = {
   messages: ChatMessage[];
   pending: string[];
   session: Session | null;
+  busy: boolean;
 };
 
-export default function MessageList({ messages, pending, session }: Props) {
-  const empty = messages.length === 0 && pending.length === 0;
+export default function MessageList({ messages, pending, session, busy }: Props) {
+  const showThinking = busy || pending.length > 0;
+  const empty = messages.length === 0 && pending.length === 0 && !showThinking;
   const scroller = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
   const previousTotal = useRef(0);
-  const total = messages.length + pending.length;
+  const total = messages.length + pending.length + (showThinking ? 1 : 0);
 
   useEffect(() => {
     const element = scroller.current;
     const grew = total > previousTotal.current;
     previousTotal.current = total;
     if (!element || !grew) return;
-    if (pending.length > 0 || nearBottom.current) {
+    if (pending.length > 0 || showThinking || nearBottom.current) {
       element.scrollTop = element.scrollHeight;
     }
-  }, [total, pending.length]);
+  }, [total, pending.length, showThinking]);
 
   if (empty) {
     return (
@@ -35,10 +37,7 @@ export default function MessageList({ messages, pending, session }: Props) {
         <div className="max-w-xs space-y-3 text-center">
           <p className="text-base font-medium text-cave-200">Comece ditando.</p>
           <p className="text-sm leading-relaxed text-cave-400">
-            Toque no microfone do teclado do Android e fale. O texto vem pra cá e eu executo no seu PC.
-          </p>
-          <p className="text-xs leading-relaxed text-cave-500">
-            O microfone nativo dentro do app entra na Fase 2. Até lá, o ditado do teclado já resolve.
+            Toque no microfone do app ou use o teclado. O texto vem pra cá e eu executo no seu PC.
           </p>
         </div>
         {session && (
@@ -73,6 +72,21 @@ export default function MessageList({ messages, pending, session }: Props) {
           </div>
         </div>
       ))}
+
+      {showThinking && (
+        <div className="flex justify-start" aria-live="polite">
+          <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-cave-800 bg-cave-900 px-4 py-3 text-sm text-cave-300">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex gap-1">
+                <span className="size-1.5 animate-pulse rounded-full bg-ember" />
+                <span className="size-1.5 animate-pulse rounded-full bg-ember [animation-delay:150ms]" />
+                <span className="size-1.5 animate-pulse rounded-full bg-ember [animation-delay:300ms]" />
+              </span>
+              <span>Pensando…</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

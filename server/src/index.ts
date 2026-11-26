@@ -27,6 +27,7 @@ import {
   listModels,
   listPermissions,
   listSessions,
+  getSession,
   messages,
   replyPermission,
   sendPrompt,
@@ -93,11 +94,19 @@ async function snapshot() {
   const session = state.session;
   let list: ChatMessage[] = [];
   let approvals: Awaited<ReturnType<typeof listPermissions>> = [];
+  let busy = false;
   if (session) {
     try {
       list = await messages(session.id);
     } catch (error) {
       app.log.warn({ error }, "falha ao ler mensagens do OpenCode");
+    }
+    try {
+      const raw = await getSession(session.id);
+      const t = raw?.time;
+      busy = Boolean(t?.busy && (!t?.idle || t.busy > t.idle));
+    } catch {
+      /* status indisponível */
     }
   }
   try {
@@ -106,7 +115,7 @@ async function snapshot() {
     app.log.debug({ error }, "falha ao ler permissões do OpenCode");
   }
   if (approvals.length > 0) void notifyApprovals(approvals);
-  return { session, focus: state.focus, model: state.model, messages: list, approvals };
+  return { session, focus: state.focus, model: state.model, messages: list, approvals, busy };
 }
 
 async function newSession(): Promise<State["session"]> {

@@ -41,40 +41,45 @@ function setupScroll(height = 1200, viewport = 400, start = 800) {
 
 describe("MessageList rolagem automática", () => {
   it("desce quando chega mensagem do modelo com a tela no fim", () => {
-    const { rerender } = render(<MessageList messages={[userMessage]} pending={[]} session={null} />);
+    const { rerender } = render(<MessageList busy={false} messages={[userMessage]} pending={[]} session={null} />);
     const scroll = setupScroll();
 
-    rerender(<MessageList messages={[userMessage, assistantMessage]} pending={[]} session={null} />);
+    rerender(<MessageList busy={false} messages={[userMessage, assistantMessage]} pending={[]} session={null} />);
 
     expect(scroll.scrollTop).toBe(1200);
   });
 
   it("desce quando chega mensagem do usuário com a tela no fim", () => {
-    const { rerender } = render(<MessageList messages={[assistantMessage]} pending={[]} session={null} />);
+    const { rerender } = render(<MessageList busy={false} messages={[assistantMessage]} pending={[]} session={null} />);
     const scroll = setupScroll(600, 400, 200);
 
-    rerender(<MessageList messages={[assistantMessage, userMessage]} pending={[]} session={null} />);
+    rerender(<MessageList busy={false} messages={[assistantMessage, userMessage]} pending={[]} session={null} />);
 
     expect(scroll.scrollTop).toBe(600);
   });
 
   it("não puxa a tela quando o usuário está lendo mais acima", () => {
-    const { rerender } = render(<MessageList messages={[userMessage]} pending={[]} session={null} />);
+    const { rerender } = render(<MessageList busy={false} messages={[userMessage]} pending={[]} session={null} />);
     const scroll = setupScroll(1200, 400, 0);
 
     fireEvent.scroll(scroll.scroller);
-    rerender(<MessageList messages={[userMessage, assistantMessage]} pending={[]} session={null} />);
+    rerender(<MessageList busy={false} messages={[userMessage, assistantMessage]} pending={[]} session={null} />);
 
     expect(scroll.scrollTop).toBe(0);
   });
 
   it("desce ao enviar um ditado mesmo com a tela acima", () => {
-    const { rerender } = render(<MessageList messages={[userMessage]} pending={[]} session={null} />);
+    const { rerender } = render(<MessageList busy={false} messages={[userMessage]} pending={[]} session={null} />);
     const scroll = setupScroll(1200, 400, 0);
 
     fireEvent.scroll(scroll.scroller);
-    rerender(<MessageList messages={[userMessage]} pending={["novo ditado"]} session={null} />);
+    rerender(<MessageList busy={false} messages={[userMessage]} pending={["novo ditado"]} session={null} />);
 
     expect(scroll.scrollTop).toBe(1200);
+  });
+
+  it("mostra indicador de pensando quando busy", () => {
+    render(<MessageList busy={true} messages={[userMessage]} pending={[]} session={null} />);
+    expect(screen.getByText("Pensando…")).toBeTruthy();
   });
 });

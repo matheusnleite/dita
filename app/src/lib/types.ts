@@ -36,6 +36,7 @@ export type Snapshot = {
   model: { providerID: string; modelID: string } | null;
   messages: ChatMessage[];
   approvals: ApprovalRequest[];
+  busy: boolean;
 };
 
 export type Project = {
