@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ChatMessage, Session } from "../lib/types.js";
 import { formatTime } from "../lib/format.js";
 import { MicIcon } from "./icons.js";
@@ -119,7 +121,56 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     <div className="flex justify-start">
       <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-cave-800 bg-cave-900 px-4 py-3 text-sm text-cave-100">
         {message.text && (
-          <p className="whitespace-pre-wrap break-words leading-relaxed">{message.text}</p>
+          <div className="markdown break-words leading-relaxed">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0 whitespace-pre-wrap">{children}</p>,
+                a: ({ href, children }) => (
+                  <a href={href} target="_blank" rel="noreferrer" className="text-ember underline break-all">
+                    {children}
+                  </a>
+                ),
+                ul: ({ children }) => <ul className="mb-2 ml-5 list-disc space-y-1 last:mb-0">{children}</ul>,
+                ol: ({ children }) => <ol className="mb-2 ml-5 list-decimal space-y-1 last:mb-0">{children}</ol>,
+                li: ({ children }) => <li className="whitespace-pre-wrap">{children}</li>,
+                code: ({ className, children }) => {
+                  const block = /language-/.test(className ?? "");
+                  if (block) {
+                    return <code className="block whitespace-pre-wrap font-mono text-[12px] text-cave-100">{children}</code>;
+                  }
+                  return (
+                    <code className="rounded bg-cave-800 px-1 py-0.5 font-mono text-[12px] text-cave-100">
+                      {children}
+                    </code>
+                  );
+                },
+                pre: ({ children }) => (
+                  <pre className="mb-2 overflow-x-auto rounded-lg border border-cave-700 bg-cave-950 p-3 last:mb-0">
+                    {children}
+                  </pre>
+                ),
+                blockquote: ({ children }) => (
+                  <blockquote className="mb-2 border-l-2 border-cave-600 pl-3 text-cave-300 last:mb-0">
+                    {children}
+                  </blockquote>
+                ),
+                h1: ({ children }) => <h1 className="mb-2 text-base font-semibold last:mb-0">{children}</h1>,
+                h2: ({ children }) => <h2 className="mb-2 text-sm font-semibold last:mb-0">{children}</h2>,
+                h3: ({ children }) => <h3 className="mb-1 text-sm font-semibold last:mb-0">{children}</h3>,
+                hr: () => <hr className="my-2 border-cave-700" />,
+                table: ({ children }) => (
+                  <div className="mb-2 overflow-x-auto last:mb-0">
+                    <table className="min-w-full border-collapse text-xs">{children}</table>
+                  </div>
+                ),
+                th: ({ children }) => <th className="border border-cave-700 bg-cave-850 px-2 py-1 text-left">{children}</th>,
+                td: ({ children }) => <td className="border border-cave-700 px-2 py-1 align-top">{children}</td>,
+              }}
+            >
+              {message.text}
+            </ReactMarkdown>
+          </div>
         )}
         {message.error && (
           <p className="mt-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs leading-relaxed text-red-300">

@@ -78,6 +78,20 @@ describe("MessageList rolagem automática", () => {
     expect(scroll.scrollTop).toBe(1200);
   });
 
+  it("renderiza markdown do assistente sem mostrar asteriscos crus", () => {
+    render(
+      <MessageList
+        busy={false}
+        messages={[{ id: "a", role: "assistant", text: "**negrito** e `codigo`", tools: [], createdAt: 1 }]}
+        pending={[]}
+        session={null}
+      />,
+    );
+    expect(screen.getByText("negrito").tagName.toLowerCase()).toBe("strong");
+    expect(screen.getByText("codigo").tagName.toLowerCase()).toBe("code");
+    expect(screen.queryByText("**negrito** e `codigo`")).toBeNull();
+  });
+
   it("mostra indicador de pensando quando busy", () => {
     render(<MessageList busy={true} messages={[userMessage]} pending={[]} session={null} />);
     expect(screen.getByText("Pensando…")).toBeTruthy();
