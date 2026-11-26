@@ -10,3 +10,5 @@ coverage/
 dev-dist/
 *.tsbuildinfo
 .DS_Store
+.opencode/skills/frontend-design/LICENSE.txt
+.opencode/skills/frontend-design/SKILL.md
