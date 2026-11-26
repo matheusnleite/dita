@@ -1,0 +1,95 @@
+import type { Project, Snapshot } from "./types.js";
+
+export class UnauthorizedError extends Error {
+  constructor() {
+    super("unauthorized");
+    this.name = "UnauthorizedError";
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body !== undefined) headers.set("content-type", "application/json");
+
+  const response = await fetch(path, {
+    credentials: "same-origin",
+    ...init,
+    headers,
+  });
+
+  if (response.status === 401) throw new UnauthorizedError();
+
+  const data = (await response.json().catch(() => null)) as unknown;
+  if (!response.ok) {
+    const message =
+      data && typeof data === "object" && "error" in data
+        ? String((data as { error: unknown }).error)
+        : `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+  return data as T;
+}
+
+export const api = {
+  login(password: string) {
+    return request<{ ok: true }>("/api/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+  },
+  logout() {
+    return request<{ ok: true }>("/api/logout", { method: "POST" });
+  },
+  state() {
+    return request<Snapshot>("/api/state");
+  },
+  projects() {
+    return request<{ root: string; projects: Project[] }>("/api/projects");
+  },
+  createProject(name: string, template: "empty" | "node") {
+    return request<{ project: Project }>("/api/projects", {
+      method: "POST",
+      body: JSON.stringify({ name, template }),
+    });
+  },
+  trashProject(name: string, confirm: string) {
+    return request<{ trashed: string }>("/api/projects/trash", {
+      method: "POST",
+      body: JSON.stringify({ name, confirm }),
+    });
+  },
+  newSession() {
+    return request<{ session: Snapshot["session"] }>("/api/session", { method: "POST" });
+  },
+  setFocus(focus: string) {
+    return request<{ focus: string | null }>("/api/focus", {
+      method: "POST",
+      body: JSON.stringify({ focus }),
+    });
+  },
+  prompt(text: string, focus: string) {
+    return request<{ ok: true }>("/api/prompt", {
+      method: "POST",
+      body: JSON.stringify({ text, focus }),
+    });
+  },
+};
+
+export function subscribe(
+  onSnapshot: (snapshot: Snapshot) => void,
+  onStatus: (online: boolean) => void,
+): () => void {
+  const source = new EventSource("/api/events");
+
+  source.addEventListener("open", () => onStatus(true));
+  source.addEventListener("snapshot", (event) => {
+    try {
+      onSnapshot(JSON.parse((event as MessageEvent<string>).data) as Snapshot);
+    } catch {
+      /* ignora payload inválido */
+    }
+  });
+  source.addEventListener("error", () => onStatus(false));
+
+  return () => source.close();
+}

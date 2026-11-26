@@ -1,0 +1,28 @@
+{
+  "name": "dita",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dite do celular e desenvolva remotamente pelo OpenCode",
+  "workspaces": [
+    "app",
+    "server"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,app -c blue,magenta \"npm -w server run dev\" \"npm -w app run dev\"",
+    "build": "npm -w app run build && npm -w server run build",
+    "start": "npm -w server run start",
+    "test": "npm -w server run test",
+    "icons": "npm -w app run icons"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true,
+    "esbuild@0.28.2": true
+  }
+}

@@ -1,0 +1,300 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import fastifyStatic from "@fastify/static";
+import cookie from "@fastify/cookie";
+import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+
+import {
+  clearSessionCookie,
+  loginAllowed,
+  passwordsMatch,
+  recordLoginFailure,
+  recordLoginSuccess,
+  requireAuth,
+  setSessionCookie,
+} from "./auth.js";
+import { config } from "./config.js";
+import {
+  OpenCodeError,
+  type ChatMessage,
+  createSession,
+  ensureServer,
+  messages,
+  sendPrompt,
+  stopServer,
+} from "./opencode.js";
+import {
+  createProject,
+  isValidProjectName,
+  listProjects,
+  trashProject,
+} from "./projects.js";
+import { loadState, saveState, type State } from "./state.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const appDist = path.resolve(__dirname, "../../app/dist");
+
+const state: State = loadState();
+
+const app = Fastify({
+  logger: { level: process.env.DITA_LOG_LEVEL ?? "info" },
+  trustProxy: true,
+  bodyLimit: 1024 * 1024,
+});
+
+await app.register(cookie);
+
+const clients = new Set<FastifyReply>();
+
+function broadcast(event: string, data: unknown): void {
+  const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of [...clients]) {
+    try {
+      if (client.raw.writableEnded) {
+        clients.delete(client);
+        continue;
+      }
+      client.raw.write(chunk);
+    } catch {
+      clients.delete(client);
+    }
+  }
+}
+
+async function snapshot() {
+  const session = state.session;
+  let list: ChatMessage[] = [];
+  if (session) {
+    try {
+      list = await messages(session.id);
+    } catch (error) {
+      app.log.warn({ error }, "falha ao ler mensagens do OpenCode");
+    }
+  }
+  return { session, focus: state.focus, messages: list };
+}
+
+async function newSession(): Promise<State["session"]> {
+  await ensureServer();
+  const created = await createSession(config.root, "dita");
+  state.session = { id: created.id, directory: config.root, createdAt: Date.now() };
+  state.focus = null;
+  saveState(state);
+  return state.session;
+}
+
+async function retryOnMissingSession<T>(operation: (sessionId: string) => Promise<T>): Promise<T> {
+  const current = state.session ?? (await newSession());
+  if (!current) throw new Error("Não consegui criar a sessão");
+  try {
+    return await operation(current.id);
+  } catch (error) {
+    if (error instanceof OpenCodeError && error.status === 404) {
+      const fresh = await newSession();
+      if (!fresh) throw error;
+      return operation(fresh.id);
+    }
+    throw error;
+  }
+}
+
+function normalizeFocus(input: unknown): string | null {
+  if (input === null || input === undefined || input === "" || input === "root") return null;
+  if (typeof input !== "string") throw new Error("Foco inválido");
+
+  const target = path.resolve(config.root, input);
+  const rootWithSep = config.root.endsWith(path.sep) ? config.root : config.root + path.sep;
+  if (target !== config.root && !target.startsWith(rootWithSep)) {
+    throw new Error("Foco fora da raiz de projetos");
+  }
+  if (!fs.existsSync(target) || !fs.statSync(target).isDirectory()) {
+    throw new Error("Diretório de foco não existe");
+  }
+  return target === config.root ? null : target;
+}
+
+function focusPrefix(focus: string | null): string {
+  if (!focus) return "";
+  const relative = path.relative(config.root, focus);
+  if (!relative) return "";
+  return `Contexto: trabalhe em ${relative} (diretório ${focus}).\n\n`;
+}
+
+app.get("/api/health", async () => ({ ok: true, url: config.opencodeUrl }));
+
+app.post("/api/login", async (request, reply) => {
+  const ip = request.ip;
+  if (!loginAllowed(ip)) {
+    return reply.code(429).send({ error: "too_many_attempts" });
+  }
+
+  const body = (request.body ?? {}) as { password?: unknown };
+  if (typeof body.password !== "string" || !passwordsMatch(body.password)) {
+    recordLoginFailure(ip);
+    return reply.code(401).send({ error: "invalid_password" });
+  }
+
+  recordLoginSuccess(ip);
+  setSessionCookie(reply, request.protocol === "https");
+  return { ok: true };
+});
+
+await app.register(async (api) => {
+  api.addHook("preHandler", requireAuth);
+
+  api.post("/api/logout", async (request, reply) => {
+    clearSessionCookie(reply, request.protocol === "https");
+    return { ok: true };
+  });
+
+  api.get("/api/state", async () => snapshot());
+
+  api.get("/api/projects", async () => ({
+    root: config.root,
+    projects: listProjects(),
+  }));
+
+  api.post("/api/projects", async (request, reply) => {
+    const body = (request.body ?? {}) as { name?: unknown; template?: unknown };
+    if (typeof body.name !== "string" || !isValidProjectName(body.name)) {
+      return reply.code(400).send({ error: "invalid_name" });
+    }
+    const template = body.template === "node" ? "node" : "empty";
+    try {
+      const project = createProject(body.name, template);
+      return { project };
+    } catch (error) {
+      return reply.code(409).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/projects/trash", async (request, reply) => {
+    const body = (request.body ?? {}) as { name?: unknown; confirm?: unknown };
+    if (typeof body.name !== "string" || !isValidProjectName(body.name)) {
+      return reply.code(400).send({ error: "invalid_name" });
+    }
+    if (body.confirm !== body.name) {
+      return reply.code(400).send({ error: "confirmation_mismatch" });
+    }
+    try {
+      return { trashed: trashProject(body.name) };
+    } catch (error) {
+      return reply.code(404).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/session", async () => {
+    const session = await newSession();
+    broadcast("snapshot", await snapshot());
+    return { session };
+  });
+
+  api.post("/api/focus", async (request, reply) => {
+    const body = (request.body ?? {}) as { focus?: unknown };
+    try {
+      state.focus = normalizeFocus(body.focus);
+      saveState(state);
+      broadcast("snapshot", await snapshot());
+      return { focus: state.focus };
+    } catch (error) {
+      return reply.code(400).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/prompt", async (request, reply) => {
+    const body = (request.body ?? {}) as { text?: unknown; focus?: unknown };
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text) return reply.code(400).send({ error: "empty_prompt" });
+    if (text.length > 8000) return reply.code(413).send({ error: "prompt_too_long" });
+
+    if (body.focus !== undefined) {
+      try {
+        state.focus = normalizeFocus(body.focus);
+      } catch {
+        /* foco inválido não bloqueia o ditado */
+      }
+    }
+
+    try {
+      const payload = focusPrefix(state.focus) + text;
+      await retryOnMissingSession((sessionId) => sendPrompt(sessionId, payload));
+      saveState(state);
+      broadcast("snapshot", await snapshot());
+      return { ok: true };
+    } catch (error) {
+      app.log.error({ error }, "falha ao enviar prompt");
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.get("/api/events", async (request, reply) => {
+    reply.hijack();
+    reply.raw.writeHead(200, {
+      "content-type": "text/event-stream; charset=utf-8",
+      "cache-control": "no-cache, no-transform",
+      connection: "keep-alive",
+      "x-accel-buffering": "no",
+    });
+    reply.raw.write("retry: 3000\n\n");
+    clients.add(reply);
+
+    const cleanup = () => {
+      clients.delete(reply);
+    };
+    request.raw.on("close", cleanup);
+    reply.raw.on("error", cleanup);
+
+    try {
+      const first = await snapshot();
+      reply.raw.write(`event: snapshot\ndata: ${JSON.stringify(first)}\n\n`);
+    } catch {
+      reply.raw.write(`event: snapshot\ndata: ${JSON.stringify({ session: null, focus: null, messages: [] })}\n\n`);
+    }
+  });
+});
+
+let lastSnapshotHash = "";
+setInterval(async () => {
+  if (clients.size === 0) return;
+  try {
+    const current = await snapshot();
+    const hash = JSON.stringify(current);
+    if (hash !== lastSnapshotHash) {
+      lastSnapshotHash = hash;
+      broadcast("snapshot", current);
+    }
+  } catch (error) {
+    app.log.debug({ error }, "tick de snapshot falhou");
+  }
+}, 900).unref();
+
+if (fs.existsSync(appDist)) {
+  await app.register(fastifyStatic, { root: appDist, wildcard: false });
+  app.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply) => {
+    if (request.url.startsWith("/api/")) {
+      return reply.code(404).send({ error: "not_found" });
+    }
+    return reply.sendFile("index.html");
+  });
+}
+
+try {
+  await app.listen({ host: config.host, port: config.port });
+  app.log.info(`dita ouvindo em http://${config.host}:${config.port}`);
+  app.log.info(`raiz de projetos: ${config.root}`);
+  if (config.generatedPassword) {
+    app.log.warn(`senha gerada: ${config.password}  (salva em ${path.join(config.dataDir, "credentials.json")})`);
+  }
+} catch (error) {
+  app.log.error(error);
+  process.exit(1);
+}
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, async () => {
+    stopServer();
+    await app.close();
+    process.exit(0);
+  });
+}
