@@ -1,7 +1,25 @@
 import json
 import sys
+import wave
 
+import numpy as np
 from faster_whisper import WhisperModel
+
+
+def read_wav(path: str) -> np.ndarray:
+    with wave.open(path, "rb") as wav:
+        n_channels = wav.getnchannels()
+        sample_width = wav.getsampwidth()
+        n_frames = wav.getnframes()
+        frames = wav.readframes(n_frames)
+
+    if sample_width != 2:
+        raise ValueError(f"unsupported_sample_width:{sample_width}")
+
+    audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    if n_channels > 1:
+        audio = audio.reshape(-1, n_channels).mean(axis=1)
+    return audio
 
 
 def main() -> None:
@@ -16,7 +34,7 @@ def main() -> None:
             continue
         try:
             req = json.loads(line)
-            audio = req["audio"]
+            audio = read_wav(req["audio"])
             language = req.get("language") or "pt"
             segments, info = model.transcribe(
                 audio,
