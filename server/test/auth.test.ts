@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { signSession, verifySession } from "../src/auth.js";
+import { SESSION_MAX_AGE_SECONDS, signSession, verifySession } from "../src/auth.js";
 
 describe("sessÃ£o assinada", () => {
   it("aceita token vÃ¡lido", () => {
@@ -20,5 +20,11 @@ describe("sessÃ£o assinada", () => {
   it("recusa token malformado", () => {
     expect(verifySession("abc", "segredo-de-teste")).toBe(false);
     expect(verifySession(undefined, "segredo-de-teste")).toBe(false);
+  });
+});
+
+describe("expiração da sessão", () => {
+  it("padrão é 12 horas", () => {
+    expect(SESSION_MAX_AGE_SECONDS).toBe(12 * 60 * 60);
   });
 });

@@ -3,7 +3,8 @@ import type { FastifyReply, FastifyRequest } from "fastify";
 import { config } from "./config.js";
 
 export const SESSION_COOKIE = "dita_session";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+export const SESSION_MAX_AGE_SECONDS =
+  Math.max(1, Number(process.env.DITA_SESSION_HOURS ?? 12)) * 60 * 60;
 
 type Payload = { exp: number };
 
@@ -75,12 +76,12 @@ export async function requireAuth(request: FastifyRequest, reply: FastifyReply):
 }
 
 export function setSessionCookie(reply: FastifyReply, secure: boolean): void {
-  reply.setCookie(SESSION_COOKIE, signSession(Date.now() + MAX_AGE_SECONDS * 1000), {
+  reply.setCookie(SESSION_COOKIE, signSession(Date.now() + SESSION_MAX_AGE_SECONDS * 1000), {
     path: "/",
     httpOnly: true,
     sameSite: "lax",
     secure,
-    maxAge: MAX_AGE_SECONDS,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
 }
 
