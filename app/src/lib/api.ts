@@ -84,6 +84,21 @@ export const api = {
     body.append("audio", audio, "ditado.webm");
     return request<{ text: string }>("/api/transcribe", { method: "POST", body });
   },
+  replyApproval(sessionID: string, requestID: string, decision: "once" | "always" | "reject") {
+    return request<{ ok: true }>("/api/approval/reply", {
+      method: "POST",
+      body: JSON.stringify({ sessionID, requestID, decision }),
+    });
+  },
+  pushPublicKey() {
+    return request<{ publicKey: string }>("/api/push/public-key");
+  },
+  pushSubscribe(subscription: { endpoint: string; keys: { p256dh: string; auth: string } }) {
+    return request<{ ok: true }>("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify(subscription),
+    });
+  },
   prompt(text: string, focus: string) {
     return request<{ ok: true }>("/api/prompt", {
       method: "POST",

@@ -79,8 +79,10 @@ Depois, no Android: abra a URL no Chrome, menu **⋮ → Instalar app**. O PWA g
 3. Toque no botão de microfone do app para ditar, ou use o microfone do teclado. Toque de novo para parar.
 4. Envie. A resposta aparece na conversa em tempo real.
 5. No menu, **Modelo** lista os modelos do OpenCode, grátis primeiro, e troca o modelo da Sessão na hora.
-6. **+** cria projeto (pasta + `git init` + README + `.gitignore`).
-7. A lixeira move o projeto para `_lixeira/<nome>-<data>`; nada é apagado de imediato.
+6. No menu, **Notificações** ativa Web Push para aprovações pendentes.
+7. Ações de risco pedem aprovação na tela; você pode negar, permitir uma vez ou sempre.
+8. **+** cria projeto (pasta + `git init` + README + `.gitignore`).
+9. A lixeira move o projeto para `_lixeira/<nome>-<data>`; nada é apagado de imediato.
 
 ## Estrutura
 
@@ -98,7 +100,7 @@ dita/
 - [x] **Fase 1** — Ponte, login, projetos, Sessão raiz, Foco, enviar texto, conversa em tempo real, seletor de modelo.
 - [x] **Fase 2** — ditado dentro do app (Web Speech API) com fallback.
 - [x] **Fase 3** — transcrição no PC com Whisper local (`faster-whisper`) e fallback de navegador.
-- [ ] **Fase 4** — Web Push e tela de Aprovação para Ações de risco.
+- [x] **Fase 4** — Web Push e tela de Aprovação para Ações de risco.
 
 ## Transcrição local (Fase 3)
 

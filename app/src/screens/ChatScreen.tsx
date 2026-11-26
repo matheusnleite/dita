@@ -8,6 +8,7 @@ import Sheet from "../components/Sheet.js";
 import TrashDialog from "../components/TrashDialog.js";
 import { MenuIcon } from "../components/icons.js";
 import { UnauthorizedError, api, subscribe } from "../lib/api.js";
+import { setupPush } from "../lib/push.js";
 import { errorLabel, relativeFocus, sortProjects } from "../lib/format.js";
 import type { ModelOption, Project, Snapshot } from "../lib/types.js";
 
@@ -28,7 +29,7 @@ type Props = {
 
 type Dialog = "new-project" | "trash" | "model" | null;
 
-const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [] };
+const EMPTY: Snapshot = { session: null, focus: null, model: null, messages: [], approvals: [] };
 
 export default function ChatScreen({ onSignedOut }: Props) {
   const [snapshot, setSnapshot] = useState<Snapshot>(EMPTY);
@@ -44,6 +45,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
   const [modelsLoading, setModelsLoading] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);
   const [dictationMode, setDictationMode] = useState<DictationMode>(loadDictationMode);
+  const [pushStatus, setPushStatus] = useState<string | null>(null);
 
   const handleAuth = useCallback(
     (caught: unknown): boolean => {
@@ -182,9 +184,36 @@ export default function ChatScreen({ onSignedOut }: Props) {
     }
   }
 
+  function enablePush() {
+    setPushStatus("ativando...");
+    void setupPush().then((result) => {
+      const msg =
+        result === "ok"
+          ? "notificações ativadas"
+          : result === "denied"
+            ? "notificação bloqueada no navegador"
+            : result === "unsupported"
+              ? "push não suportado neste navegador"
+              : "falha ao ativar notificações";
+      setPushStatus(msg);
+      if (result === "ok") setError(null);
+      else setError(msg);
+    });
+  }
+
   function signOut() {
     setMenuOpen(false);
     void api.logout().finally(onSignedOut);
+  }
+
+  function replyApproval(sessionID: string, requestID: string, decision: "once" | "always" | "reject") {
+    void guard(async () => {
+      await api.replyApproval(sessionID, requestID, decision);
+      setSnapshot((current) => ({
+        ...current,
+        approvals: current.approvals.filter((item) => item.id !== requestID),
+      }));
+    });
   }
 
   const focusLabel = relativeFocus(snapshot.focus, root) || "raiz";
@@ -242,6 +271,54 @@ export default function ChatScreen({ onSignedOut }: Props) {
 
       <MessageList messages={snapshot.messages} pending={pending} session={snapshot.session} />
 
+      {snapshot.approvals.length > 0 && (
+        <div className="border-t border-amber-500/30 bg-amber-500/10 px-3 py-3">
+          <p className="mb-2 text-xs font-medium text-amber-200">
+            Aprovação necessária ({snapshot.approvals.length})
+          </p>
+          <div className="space-y-2">
+            {snapshot.approvals.map((item) => (
+              <div key={item.id} className="rounded-xl border border-cave-700 bg-cave-950 p-3">
+                <p className="text-sm text-cave-100">
+                  <span className="font-mono text-amber-300">{item.action}</span>
+                </p>
+                {item.resources.length > 0 && (
+                  <p className="mt-1 break-all font-mono text-[11px] text-cave-400">
+                    {item.resources.join(", ")}
+                  </p>
+                )}
+                {item.message && (
+                  <p className="mt-1 text-xs text-cave-300">{item.message}</p>
+                )}
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => replyApproval(item.sessionID, item.id, "reject")}
+                    className="h-10 flex-1 rounded-lg border border-red-500/40 text-sm text-red-300"
+                  >
+                    Negar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => replyApproval(item.sessionID, item.id, "once")}
+                    className="h-10 flex-1 rounded-lg border border-cave-600 text-sm text-cave-100"
+                  >
+                    Permitir
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => replyApproval(item.sessionID, item.id, "always")}
+                    className="h-10 flex-1 rounded-lg bg-emerald-600 text-sm text-cave-950"
+                  >
+                    Sempre
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Composer
         onSend={send}
         onError={setError}
@@ -267,6 +344,15 @@ export default function ChatScreen({ onSignedOut }: Props) {
             >
               <span className="block truncate px-4">
                 Ditado · {dictationMode === "server" ? "PC (Whisper)" : "navegador"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={enablePush}
+              className="h-12 w-full rounded-xl border border-cave-700 bg-cave-950 text-left text-sm text-cave-100 transition hover:border-ember/50"
+            >
+              <span className="block truncate px-4">
+                Notificações{pushStatus ? ` · ${pushStatus}` : ""}
               </span>
             </button>
             <button

@@ -25,7 +25,9 @@ import {
   createSession,
   ensureServer,
   listModels,
+  listPermissions,
   messages,
+  replyPermission,
   sendPrompt,
   setSessionModel,
   stopServer,
@@ -36,6 +38,7 @@ import {
   listProjects,
   trashProject,
 } from "./projects.js";
+import { getPublicVapidKey, sendPush, type PushSubscription } from "./push.js";
 import { loadState, saveState, type State } from "./state.js";
 import { stopTranscriber, transcribeAudio } from "./transcribe.js";
 
@@ -58,9 +61,35 @@ await app.register(multipart, {
   },
 });
 
+const notifiedApprovals = new Set<string>();
+
+async function notifyApprovals(approvals: Array<{ id: string; action: string; resources: string[] }>) {
+  const fresh = approvals.filter((item) => !notifiedApprovals.has(item.id));
+  if (fresh.length === 0) return;
+  for (const item of fresh) notifiedApprovals.add(item.id);
+
+  const subs = (state.pushSubscriptions ?? []) as PushSubscription[];
+  if (subs.length === 0) return;
+
+  const first = fresh[0];
+  if (!first) return;
+  const body =
+    fresh.length === 1
+      ? `${first.action}${first.resources[0] ? ` · ${first.resources[0]}` : ""}`
+      : `${fresh.length} ações aguardando aprovação`;
+  const alive = await sendPush(subs, {
+    title: "dita: aprovação necessária",
+    body,
+    url: "/",
+  });
+  state.pushSubscriptions = alive;
+  saveState(state);
+}
+
 async function snapshot() {
   const session = state.session;
   let list: ChatMessage[] = [];
+  let approvals: Awaited<ReturnType<typeof listPermissions>> = [];
   if (session) {
     try {
       list = await messages(session.id);
@@ -68,7 +97,13 @@ async function snapshot() {
       app.log.warn({ error }, "falha ao ler mensagens do OpenCode");
     }
   }
-  return { session, focus: state.focus, model: state.model, messages: list };
+  try {
+    approvals = await listPermissions(config.root);
+  } catch (error) {
+    app.log.debug({ error }, "falha ao ler permissões do OpenCode");
+  }
+  if (approvals.length > 0) void notifyApprovals(approvals);
+  return { session, focus: state.focus, model: state.model, messages: list, approvals };
 }
 
 async function newSession(): Promise<State["session"]> {
@@ -262,6 +297,51 @@ await app.register(async (api) => {
       return { ok: true };
     } catch (error) {
       app.log.error({ error }, "falha ao enviar prompt");
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.get("/api/push/public-key", async () => ({ publicKey: getPublicVapidKey() }));
+
+  api.post("/api/push/subscribe", async (request, reply) => {
+    const body = request.body as PushSubscription | undefined;
+    if (
+      !body ||
+      typeof body.endpoint !== "string" ||
+      !body.keys ||
+      typeof body.keys.p256dh !== "string" ||
+      typeof body.keys.auth !== "string"
+    ) {
+      return reply.code(400).send({ error: "invalid_subscription" });
+    }
+
+    const subs = (state.pushSubscriptions ?? []) as PushSubscription[];
+    const next = subs.filter((item) => item.endpoint !== body.endpoint);
+    next.push({ endpoint: body.endpoint, keys: { p256dh: body.keys.p256dh, auth: body.keys.auth } });
+    state.pushSubscriptions = next;
+    saveState(state);
+    return { ok: true };
+  });
+
+  api.post("/api/approval/reply", async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      sessionID?: unknown;
+      requestID?: unknown;
+      decision?: unknown;
+    };
+    if (
+      typeof body.sessionID !== "string" ||
+      typeof body.requestID !== "string" ||
+      (body.decision !== "once" && body.decision !== "always" && body.decision !== "reject")
+    ) {
+      return reply.code(400).send({ error: "invalid_approval" });
+    }
+
+    try {
+      await replyPermission(body.sessionID, body.requestID, body.decision);
+      return { ok: true };
+    } catch (error) {
+      app.log.error({ error }, "falha ao responder aprovação");
       return reply.code(502).send({ error: (error as Error).message });
     }
   });

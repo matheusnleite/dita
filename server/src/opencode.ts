@@ -24,6 +24,14 @@ export type ModelOption = {
   status?: string;
 };
 
+export type PermissionRequest = {
+  id: string;
+  sessionID: string;
+  action: string;
+  resources: string[];
+  message?: string;
+};
+
 const basicAuth =
   "Basic " + Buffer.from(`${OPEN_CODE_USER}:${config.opencodePassword}`).toString("base64");
 
@@ -313,14 +321,36 @@ export async function listModels(directory: string): Promise<ModelOption[]> {
   return normalizeModels(raw);
 }
 
+export async function listPermissions(directory: string): Promise<PermissionRequest[]> {
+  const query = new URLSearchParams();
+  query.set("location[directory]", directory);
+  const raw = await request<unknown>(`/api/permission/request?${query.toString()}`);
+  const data = unwrap<unknown>(raw);
+  const list = Array.isArray(data)
+    ? data
+    : ((data as { data?: unknown } | undefined)?.data as unknown);
+  if (!Array.isArray(list)) return [];
+  return (list as Array<Record<string, unknown>>)
+    .filter((item) => typeof item?.id === "string" && typeof item?.sessionID === "string")
+    .map((item) => ({
+      id: String(item.id),
+      sessionID: String(item.sessionID),
+      action: typeof item.action === "string" ? item.action : "unknown",
+      resources: Array.isArray(item.resources)
+        ? item.resources.filter((r): r is string => typeof r === "string")
+        : [],
+      ...(typeof item.message === "string" && item.message ? { message: item.message } : {}),
+    }));
+}
+
 export async function replyPermission(
   sessionId: string,
   requestId: string,
-  reply: "once" | "always" | "reject",
+  decision: "once" | "always" | "reject",
 ): Promise<void> {
   await request(
     `/api/session/${encodeURIComponent(sessionId)}/permission/${encodeURIComponent(requestId)}/reply`,
-    { method: "POST", body: JSON.stringify({ reply }) },
+    { method: "POST", body: JSON.stringify({ decision }) },
   );
 }
 
