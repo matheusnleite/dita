@@ -11,6 +11,7 @@ export type Session = {
   id: string;
   directory: string;
   createdAt: number;
+  title?: string;
 };
 
 export type ModelOption = {

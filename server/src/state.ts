@@ -5,6 +5,7 @@ export type SessionState = {
   id: string;
   directory: string;
   createdAt: number;
+  title?: string;
 };
 
 export type State = {

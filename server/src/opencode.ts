@@ -156,6 +156,19 @@ export async function createSession(
   return { ...session, directory };
 }
 
+export function titleFromPrompt(text: string): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return "Nova conversa";
+  return clean.length > 60 ? `${clean.slice(0, 57)}...` : clean;
+}
+
+export async function updateSessionTitle(sessionId: string, title: string): Promise<void> {
+  await request(`/api/session/${encodeURIComponent(sessionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
+}
+
 export async function listSessions(directory: string): Promise<OpenCodeSession[]> {
   const query = new URLSearchParams({ directory, limit: "20" });
   const raw = await request<unknown>(`/api/session?${query.toString()}`);

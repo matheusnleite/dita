@@ -331,7 +331,7 @@ export default function ChatScreen({ onSignedOut }: Props) {
           title="dita"
           description={
             snapshot.session
-              ? `sessão ${snapshot.session.id.slice(0, 12)} · ${snapshot.messages.length} mensagens`
+              ? `${snapshot.session.title || "Nova conversa"} · ${snapshot.messages.length} mensagens`
               : "nenhuma sessão ainda"
           }
           onClose={() => setMenuOpen(false)}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeMessages } from "../src/opencode.js";
+import { normalizeMessages, titleFromPrompt } from "../src/opencode.js";
 
 const raw = {
   data: [
@@ -89,5 +89,20 @@ describe("normalizeMessages", () => {
 
     expect(messages.map((message) => message.role)).toEqual(["assistant", "user"]);
     expect(messages.some((message) => message.text.includes("tool catalog"))).toBe(false);
+  });
+});
+
+describe("titleFromPrompt", () => {
+  it("usa o prompt como título curto", () => {
+    expect(titleFromPrompt("  corrigir bug   no login  ")).toBe("corrigir bug no login");
+  });
+
+  it("corta prompts longos", () => {
+    const long = "a".repeat(80);
+    expect(titleFromPrompt(long)).toBe(`${"a".repeat(57)}...`);
+  });
+
+  it("usa fallback para texto vazio", () => {
+    expect(titleFromPrompt("   ")).toBe("Nova conversa");
   });
 });

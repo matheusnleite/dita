@@ -31,6 +31,8 @@ import {
   sendPrompt,
   setSessionModel,
   stopServer,
+  titleFromPrompt,
+  updateSessionTitle,
 } from "./opencode.js";
 import {
   createProject,
@@ -108,8 +110,8 @@ async function snapshot() {
 
 async function newSession(): Promise<State["session"]> {
   await ensureServer();
-  const created = await createSession(config.root, "dita", state.model);
-  state.session = { id: created.id, directory: config.root, createdAt: Date.now() };
+  const created = await createSession(config.root, "Nova conversa", state.model);
+  state.session = { id: created.id, directory: config.root, createdAt: Date.now(), title: "Nova conversa" };
   state.focus = null;
   saveState(state);
   return state.session;
@@ -293,6 +295,16 @@ await app.register(async (api) => {
     try {
       const payload = focusPrefix(state.focus) + text;
       await retryOnMissingSession((sessionId) => sendPrompt(sessionId, payload));
+
+      const session = state.session;
+      if (session && (!session.title || session.title === "Nova conversa" || session.title === "dita")) {
+        const title = titleFromPrompt(text);
+        session.title = title;
+        void updateSessionTitle(session.id, title).catch((error) => {
+          app.log.debug({ error }, "falha ao atualizar título da sessão");
+        });
+      }
+
       saveState(state);
       return { ok: true };
     } catch (error) {
