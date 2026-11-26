@@ -17,11 +17,11 @@ import type { ModelOption, Project, Snapshot } from "../lib/types.js";
 type DictationMode = "server" | "browser";
 const DICTATION_KEY = "dita:dictation-mode";
 
-function loadDictationMode(): DictationMode {
+export function loadDictationMode(): DictationMode {
   try {
-    return localStorage.getItem(DICTATION_KEY) === "browser" ? "browser" : "server";
+    return localStorage.getItem(DICTATION_KEY) === "server" ? "server" : "browser";
   } catch {
-    return "server";
+    return "browser";
   }
 }
 
