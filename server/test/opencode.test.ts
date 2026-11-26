@@ -72,4 +72,22 @@ describe("normalizeMessages", () => {
       }),
     ).toEqual([]);
   });
+
+  it("não mostra mensagens internas do tipo system", () => {
+    const messages = normalizeMessages({
+      data: [
+        {
+          id: "s",
+          time: { created: 3 },
+          type: "system",
+          text: "The Code Mode tool catalog has changed.",
+        },
+        { id: "u", time: { created: 2 }, type: "user", text: "olá" },
+        { id: "a", time: { created: 1 }, type: "assistant", content: [{ type: "text", text: "ok" }] },
+      ],
+    });
+
+    expect(messages.map((message) => message.role)).toEqual(["assistant", "user"]);
+    expect(messages.some((message) => message.text.includes("tool catalog"))).toBe(false);
+  });
 });

@@ -175,7 +175,6 @@ type RawMessage = {
   id?: string;
   type?: string;
   text?: string;
-  description?: string;
   content?: RawPart[];
   outcome?: string;
   error?: { message?: string };
@@ -191,10 +190,8 @@ function normalizeMessage(raw: RawMessage, index: number): ChatMessage | null {
     return text ? { id, role: "user", text, tools: [], createdAt } : null;
   }
 
-  if (raw.type === "system") {
-    const text = (raw.text ?? raw.description ?? "").trim();
-    return text ? { id, role: "system", text, tools: [], createdAt } : null;
-  }
+  // Mensagens internas do OpenCode (ex.: catálogo de tools) não fazem parte da conversa.
+  if (raw.type === "system") return null;
 
   if (raw.type === "idle") {
     if (raw.outcome !== "failed" || !raw.error?.message) return null;
