@@ -84,21 +84,37 @@ export const api = {
   },
 };
 
+// SSE é bufferizado por proxies (Cloudflare Tunnel segura o stream). Polling
+// de estado atravessa qualquer proxy e mantém a conversa atualizada.
+export const POLL_INTERVAL_MS = 1200;
+
 export function subscribe(
   onSnapshot: (snapshot: Snapshot) => void,
   onStatus: (online: boolean) => void,
+  intervalMs = POLL_INTERVAL_MS,
 ): () => void {
-  const source = new EventSource("/api/events");
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
 
-  source.addEventListener("open", () => onStatus(true));
-  source.addEventListener("snapshot", (event) => {
+  async function tick() {
+    if (stopped) return;
     try {
-      onSnapshot(JSON.parse((event as MessageEvent<string>).data) as Snapshot);
-    } catch {
-      /* ignora payload inválido */
+      const snapshot = await api.state();
+      if (stopped) return;
+      onSnapshot(snapshot);
+      onStatus(true);
+    } catch (error) {
+      if (stopped) return;
+      onStatus(false);
+      if (error instanceof UnauthorizedError) return;
     }
-  });
-  source.addEventListener("error", () => onStatus(false));
+    if (!stopped) timer = setTimeout(tick, intervalMs);
+  }
 
-  return () => source.close();
+  void tick();
+
+  return () => {
+    stopped = true;
+    if (timer) clearTimeout(timer);
+  };
 }

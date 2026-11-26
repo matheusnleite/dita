@@ -47,23 +47,6 @@ const app = Fastify({
 
 await app.register(cookie);
 
-const clients = new Set<FastifyReply>();
-
-function broadcast(event: string, data: unknown): void {
-  const chunk = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  for (const client of [...clients]) {
-    try {
-      if (client.raw.writableEnded) {
-        clients.delete(client);
-        continue;
-      }
-      client.raw.write(chunk);
-    } catch {
-      clients.delete(client);
-    }
-  }
-}
-
 async function snapshot() {
   const session = state.session;
   let list: ChatMessage[] = [];
@@ -188,7 +171,6 @@ await app.register(async (api) => {
 
   api.post("/api/session", async () => {
     const session = await newSession();
-    broadcast("snapshot", await snapshot());
     return { session };
   });
 
@@ -197,7 +179,6 @@ await app.register(async (api) => {
     try {
       state.focus = normalizeFocus(body.focus);
       saveState(state);
-      broadcast("snapshot", await snapshot());
       return { focus: state.focus };
     } catch (error) {
       return reply.code(400).send({ error: (error as Error).message });
@@ -242,7 +223,6 @@ await app.register(async (api) => {
         }
       }
 
-      broadcast("snapshot", await snapshot());
       return { model: state.model };
     } catch (error) {
       app.log.error({ error }, "falha ao trocar modelo");
@@ -268,54 +248,13 @@ await app.register(async (api) => {
       const payload = focusPrefix(state.focus) + text;
       await retryOnMissingSession((sessionId) => sendPrompt(sessionId, payload));
       saveState(state);
-      broadcast("snapshot", await snapshot());
       return { ok: true };
     } catch (error) {
       app.log.error({ error }, "falha ao enviar prompt");
       return reply.code(502).send({ error: (error as Error).message });
     }
   });
-
-  api.get("/api/events", async (request, reply) => {
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      "content-type": "text/event-stream; charset=utf-8",
-      "cache-control": "no-cache, no-transform",
-      connection: "keep-alive",
-      "x-accel-buffering": "no",
-    });
-    reply.raw.write("retry: 3000\n\n");
-    clients.add(reply);
-
-    const cleanup = () => {
-      clients.delete(reply);
-    };
-    request.raw.on("close", cleanup);
-    reply.raw.on("error", cleanup);
-
-    try {
-      const first = await snapshot();
-      reply.raw.write(`event: snapshot\ndata: ${JSON.stringify(first)}\n\n`);
-    } catch {
-      reply.raw.write(`event: snapshot\ndata: ${JSON.stringify({ session: null, focus: null, messages: [] })}\n\n`);
-    }
-  });
 });
-
-let lastSnapshotHash = "";
-setInterval(async () => {
-  if (clients.size === 0) return;
-  try {
-    const current = await snapshot();
-    const hash = JSON.stringify(current);
-    if (hash !== lastSnapshotHash) {
-      lastSnapshotHash = hash;
-      broadcast("snapshot", current);
-    }
-  } catch (error) {
-    app.log.debug({ error }, "tick de snapshot falhou");
-  }
-}, 900).unref();
 
 if (fs.existsSync(appDist)) {
   await app.register(fastifyStatic, { root: appDist, wildcard: false });
