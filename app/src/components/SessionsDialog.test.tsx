@@ -15,6 +15,7 @@ vi.mock("../lib/api.js", () => ({
       session: { id: "ses_2", directory: "/tmp/projeto", createdAt: 1, title: "Outra conversa" },
     }),
     renameSession: vi.fn().mockResolvedValue({ ok: true, title: "Renomeada" }),
+    deleteSession: vi.fn().mockResolvedValue({ ok: true }),
   },
 }));
 
@@ -32,6 +33,7 @@ describe("SessionsDialog", () => {
         onClose={vi.fn()}
         onSelect={vi.fn()}
         onNewSession={onNewSession}
+        onDeleted={vi.fn()}
       />,
     );
 
@@ -49,6 +51,7 @@ describe("SessionsDialog", () => {
         onClose={vi.fn()}
         onSelect={onSelect}
         onNewSession={vi.fn()}
+        onDeleted={vi.fn()}
       />,
     );
 
@@ -65,6 +68,31 @@ describe("SessionsDialog", () => {
         createdAt: 1,
         title: "Outra conversa",
       });
+    });
+  });
+
+  it("exclui sessão após confirmação", async () => {
+    const onDeleted = vi.fn();
+    render(
+      <SessionsDialog
+        currentId="ses_1"
+        onClose={vi.fn()}
+        onSelect={vi.fn()}
+        onNewSession={vi.fn()}
+        onDeleted={onDeleted}
+      />,
+    );
+
+    await screen.findByText("Outra conversa");
+    const deleteButtons = screen.getAllByRole("button", { name: "Excluir" });
+    fireEvent.click(deleteButtons[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar exclusão" }));
+
+    await waitFor(() => {
+      expect(onDeleted).toHaveBeenCalledWith("ses_2");
+    });
+    await waitFor(() => {
+      expect(screen.queryByText("Outra conversa")).toBeNull();
     });
   });
 });

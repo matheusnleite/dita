@@ -201,6 +201,10 @@ export async function updateSessionTitle(sessionId: string, title: string): Prom
   });
 }
 
+export async function deleteSession(sessionId: string): Promise<void> {
+  await request(`/api/session/${encodeURIComponent(sessionId)}`, { method: "DELETE" });
+}
+
 export async function listSessions(directory: string): Promise<OpenCodeSession[]> {
   const query = new URLSearchParams({ directory, limit: "20" });
   const raw = await request<unknown>(`/api/session?${query.toString()}`);

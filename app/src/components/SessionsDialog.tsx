@@ -10,15 +10,17 @@ type Props = {
   onClose: () => void;
   onSelect: (session: { id: string; directory: string; createdAt: number; title?: string }) => void;
   onNewSession: () => void;
+  onDeleted: (sessionID: string) => void;
 };
 
-export default function SessionsDialog({ currentId, onClose, onSelect, onNewSession }: Props) {
+export default function SessionsDialog({ currentId, onClose, onSelect, onNewSession, onDeleted }: Props) {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -61,6 +63,21 @@ export default function SessionsDialog({ currentId, onClose, onSelect, onNewSess
         current.map((item) => (item.id === sessionID ? { ...item, title: clean } : item)),
       );
       setEditing(null);
+    } catch (caught) {
+      setError(errorLabel(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(sessionID: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.deleteSession(sessionID);
+      setSessions((current) => current.filter((item) => item.id !== sessionID));
+      setConfirmDelete(null);
+      onDeleted(sessionID);
     } catch (caught) {
       setError(errorLabel(caught));
     } finally {
@@ -117,7 +134,7 @@ export default function SessionsDialog({ currentId, onClose, onSelect, onNewSess
                       </div>
                       {current && <span className="shrink-0 text-[10px] text-brass-500">atual</span>}
                     </div>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <button
                         type="button"
                         disabled={busy || current}
@@ -132,11 +149,41 @@ export default function SessionsDialog({ currentId, onClose, onSelect, onNewSess
                         onClick={() => {
                           setEditing(session.id);
                           setTitle(session.title);
+                          setConfirmDelete(null);
                         }}
                         className="h-9 rounded-lg border border-ink-700 px-3 text-xs text-bone-300 disabled:opacity-30"
                       >
                         Renomear
                       </button>
+                      {confirmDelete === session.id ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void remove(session.id)}
+                            className="h-9 rounded-lg bg-red-500/90 px-3 text-xs text-white disabled:opacity-30"
+                          >
+                            Confirmar exclusão
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setConfirmDelete(null)}
+                            className="h-9 rounded-lg border border-ink-700 px-3 text-xs text-bone-300 disabled:opacity-30"
+                          >
+                            Cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setConfirmDelete(session.id)}
+                          className="h-9 rounded-lg border border-red-500/40 px-3 text-xs text-red-300 disabled:opacity-30"
+                        >
+                          Excluir
+                        </button>
+                      )}
                     </div>
                   </>
                 )}

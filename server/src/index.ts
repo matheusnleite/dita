@@ -31,6 +31,7 @@ import {
   getSession,
   messages,
   cancelForm,
+  deleteSession,
   replyForm,
   replyPermission,
   sendPrompt,
@@ -309,6 +310,34 @@ await app.register(async (api) => {
       }
       return { ok: true, title };
     } catch (error) {
+      return reply.code(502).send({ error: (error as Error).message });
+    }
+  });
+
+  api.post("/api/session/delete", async (request, reply) => {
+    const body = (request.body ?? {}) as { sessionID?: unknown };
+    if (typeof body.sessionID !== "string") {
+      return reply.code(400).send({ error: "invalid_session" });
+    }
+
+    try {
+      await ensureServer();
+      await deleteSession(body.sessionID);
+      if (state.session?.id === body.sessionID) {
+        state.session = null;
+        state.focus = null;
+        saveState(state);
+      }
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof OpenCodeError && error.status === 404) {
+        if (state.session?.id === body.sessionID) {
+          state.session = null;
+          state.focus = null;
+          saveState(state);
+        }
+        return { ok: true };
+      }
       return reply.code(502).send({ error: (error as Error).message });
     }
   });

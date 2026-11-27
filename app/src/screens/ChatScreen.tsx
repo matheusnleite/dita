@@ -534,6 +534,14 @@ export default function ChatScreen({ onSignedOut }: Props) {
             setPending([]);
           }}
           onNewSession={newSession}
+          onDeleted={(sessionID) => {
+            setSnapshot((current) =>
+              current.session?.id === sessionID
+                ? { ...current, session: null, messages: [], approvals: [], forms: [], busy: false }
+                : current,
+            );
+            setPending([]);
+          }}
         />
       )}
     </div>

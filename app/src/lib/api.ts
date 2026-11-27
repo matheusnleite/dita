@@ -79,6 +79,12 @@ export const api = {
       body: JSON.stringify({ sessionID, title }),
     });
   },
+  deleteSession(sessionID: string) {
+    return request<{ ok: true }>("/api/session/delete", {
+      method: "POST",
+      body: JSON.stringify({ sessionID }),
+    });
+  },
   models() {
     return request<{ models: ModelOption[] }>("/api/models");
   },
