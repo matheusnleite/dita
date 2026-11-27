@@ -100,12 +100,18 @@ export default function ChatScreen({ onSignedOut }: Props) {
 
   useEffect(() => {
     setPending((current) =>
-      current.filter(
-        (text) =>
-          !snapshot.messages.some(
-            (message) => message.role === "user" && message.text.trim().endsWith(text.trim()),
-          ),
-      ),
+      current.filter((text) => {
+        const pendingText = text.trim();
+        return !snapshot.messages.some((message) => {
+          if (message.role !== "user") return false;
+          const msgText = message.text.trim();
+          if (pendingText.startsWith("Arquivos:")) {
+            return msgText === "" || msgText.includes("Veja os arquivos anexados") || msgText.endsWith(pendingText);
+          }
+          if (!pendingText) return false;
+          return msgText.endsWith(pendingText);
+        });
+      }),
     );
   }, [snapshot.messages]);
 
@@ -128,13 +134,15 @@ export default function ChatScreen({ onSignedOut }: Props) {
     }
   }
 
-  function send(text: string) {
-    setPending((current) => [...current, text]);
+  function send(text: string, files: File[]) {
+    const label =
+      text || (files.length > 0 ? `Arquivos: ${files.map((f) => f.name).join(", ")}` : "");
+    if (label) setPending((current) => [...current, label]);
     void guard(async () => {
       try {
-        await api.prompt(text, relativeFocus(snapshot.focus, root));
+        await api.prompt(text, relativeFocus(snapshot.focus, root), files);
       } catch (caught) {
-        setPending((current) => current.filter((item) => item !== text));
+        if (label) setPending((current) => current.filter((item) => item !== label));
         throw caught;
       }
     });

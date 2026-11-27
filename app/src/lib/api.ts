@@ -126,7 +126,14 @@ export const api = {
       body: JSON.stringify(subscription),
     });
   },
-  prompt(text: string, focus: string) {
+  prompt(text: string, focus: string, files: File[] = []) {
+    if (files.length > 0) {
+      const body = new FormData();
+      body.append("text", text);
+      body.append("focus", focus);
+      for (const file of files) body.append("files", file, file.name);
+      return request<{ ok: true }>("/api/prompt", { method: "POST", body });
+    }
     return request<{ ok: true }>("/api/prompt", {
       method: "POST",
       body: JSON.stringify({ text, focus }),

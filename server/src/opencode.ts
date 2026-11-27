@@ -215,10 +215,19 @@ export async function getSession(sessionId: string): Promise<{ time?: { busy?: n
   return unwrap<{ time?: { busy?: number; idle?: number } }>(raw);
 }
 
-export async function sendPrompt(sessionId: string, text: string): Promise<void> {
+export type PromptFile = { uri: string; name?: string };
+
+export async function sendPrompt(
+  sessionId: string,
+  text: string,
+  files: PromptFile[] = [],
+): Promise<void> {
   await request(`/api/session/${encodeURIComponent(sessionId)}/prompt`, {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({
+      text,
+      ...(files.length > 0 ? { files: files.map((f) => ({ uri: f.uri, ...(f.name ? { name: f.name } : {}) })) } : {}),
+    }),
   });
 }
 

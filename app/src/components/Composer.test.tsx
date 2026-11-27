@@ -51,7 +51,7 @@ describe("Composer ditado", () => {
     fireEvent.change(textarea, { target: { value: "teste" } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar ditado" }));
 
-    expect(onSend).toHaveBeenCalledWith("teste");
+    expect(onSend).toHaveBeenCalledWith("teste", []);
     expect(focusSpy).not.toHaveBeenCalled();
   });
 
@@ -102,6 +102,19 @@ describe("Composer ditado", () => {
     expect(onError).toHaveBeenCalledWith(
       "Microfone bloqueado. Libere o acesso nas permissões do navegador.",
     );
+  });
+
+  it("anexa arquivo e envia mesmo sem texto", () => {
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} onError={vi.fn()} dictationMode="browser" />);
+    const file = new File(["img"], "foto.png", { type: "image/png" });
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(screen.getByText("foto.png")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Enviar ditado" }));
+
+    expect(onSend).toHaveBeenCalledWith("", [file]);
   });
 
   it("transcreve áudio no PC e coloca texto no campo", async () => {

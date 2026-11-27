@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import fastifyStatic from "@fastify/static";
 import multipart from "@fastify/multipart";
 import cookie from "@fastify/cookie";
@@ -370,26 +370,56 @@ await app.register(async (api) => {
   });
 
   api.post("/api/prompt", async (request, reply) => {
-    const body = (request.body ?? {}) as { text?: unknown; focus?: unknown };
-    const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text) return reply.code(400).send({ error: "empty_prompt" });
-    if (text.length > 8000) return reply.code(413).send({ error: "prompt_too_long" });
-
-    if (body.focus !== undefined) {
-      try {
-        state.focus = normalizeFocus(body.focus);
-      } catch {
-        /* foco inválido não bloqueia o ditado */
-      }
-    }
+    let text = "";
+    let focusValue: unknown = undefined;
+    const files: Array<{ uri: string; name?: string }> = [];
+    const uploads: string[] = [];
 
     try {
-      const payload = focusPrefix(state.focus) + text;
-      await retryOnMissingSession((sessionId) => sendPrompt(sessionId, payload));
+      if (request.isMultipart()) {
+        for await (const part of request.parts()) {
+          if (part.type === "file") {
+            if (!part.filename) {
+              part.file.resume();
+              continue;
+            }
+            const ext = path.extname(part.filename) || "";
+            const tmpPath = path.join(os.tmpdir(), `dita-upload-${randomUUID()}${ext}`);
+            await pipeline(part.file, fs.createWriteStream(tmpPath));
+            uploads.push(tmpPath);
+            files.push({ uri: pathToFileURL(tmpPath).href, name: path.basename(part.filename) });
+          } else if (part.fieldname === "text" && typeof part.value === "string") {
+            text = part.value;
+          } else if (part.fieldname === "focus") {
+            focusValue = part.value;
+          }
+        }
+      } else {
+        const body = (request.body ?? {}) as { text?: unknown; focus?: unknown };
+        text = typeof body.text === "string" ? body.text : "";
+        focusValue = body.focus;
+      }
+
+      text = text.trim();
+      if (!text && files.length === 0) return reply.code(400).send({ error: "empty_prompt" });
+      if (text.length > 8000) return reply.code(413).send({ error: "prompt_too_long" });
+
+      if (focusValue !== undefined) {
+        try {
+          state.focus = normalizeFocus(focusValue);
+        } catch {
+          /* foco inválido não bloqueia o ditado */
+        }
+      }
+
+      const promptText = text || (files.length > 0 ? "Veja os arquivos anexados." : "");
+      const payload = focusPrefix(state.focus) + promptText;
+      await retryOnMissingSession((sessionId) => sendPrompt(sessionId, payload, files));
 
       const session = state.session;
+      const titleSource = text || files.map((f) => f.name).filter(Boolean).join(", ");
       if (session && (!session.title || session.title === "Nova conversa" || session.title === "dita")) {
-        const title = titleFromPrompt(text);
+        const title = titleFromPrompt(titleSource || "Arquivo enviado");
         session.title = title;
         void updateSessionTitle(session.id, title).catch((error) => {
           app.log.debug({ error }, "falha ao atualizar título da sessão");

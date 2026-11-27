@@ -1,5 +1,5 @@
-import { useRef, useState, type KeyboardEvent } from "react";
-import { MicIcon, SendIcon } from "./icons.js";
+import { useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { MicIcon, PaperclipIcon, SendIcon } from "./icons.js";
 import { useDictation } from "../lib/useDictation.js";
 import { useRecorder } from "../lib/useRecorder.js";
 import { api } from "../lib/api.js";
@@ -8,7 +8,7 @@ import { errorLabel } from "../lib/format.js";
 type DictationMode = "server" | "browser";
 
 type Props = {
-  onSend: (text: string) => void;
+  onSend: (text: string, files: File[]) => void;
   onError: (message: string) => void;
   disabled?: boolean;
   dictationMode: DictationMode;
@@ -16,9 +16,11 @@ type Props = {
 
 export default function Composer({ onSend, onError, disabled = false, dictationMode }: Props) {
   const [value, setValue] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
   const [transcribing, setTranscribing] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
-  const canSend = value.trim().length > 0 && !disabled;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const canSend = (value.trim().length > 0 || files.length > 0) && !disabled;
 
   function appendText(text: string) {
     const clean = text.trim();
@@ -65,11 +67,24 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
     if (!canSend) return;
     if (dictation.listening) dictation.toggle();
     if (recorder.recording) recorder.stop();
-    onSend(value.trim());
+    onSend(value.trim(), files);
     setValue("");
+    setFiles([]);
+    if (fileInput.current) fileInput.current.value = "";
     if (textarea.current) {
       textarea.current.style.height = "auto";
     }
+  }
+
+  function addFiles(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.target.files ?? []);
+    if (selected.length === 0) return;
+    setFiles((current) => [...current, ...selected].slice(0, 6));
+    event.target.value = "";
+  }
+
+  function removeFile(index: number) {
+    setFiles((current) => current.filter((_, i) => i !== index));
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -95,6 +110,27 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
         <span>{hint}</span>
       </div>
 
+      {files.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {files.map((file, index) => (
+            <span
+              key={`${file.name}-${index}`}
+              className="inline-flex max-w-full items-center gap-2 rounded-lg border border-ink-700 bg-ink-950 px-2 py-1 text-[11px] text-bone-300"
+            >
+              <span className="truncate max-w-[180px]">{file.name}</span>
+              <button
+                type="button"
+                onClick={() => removeFile(index)}
+                aria-label={`Remover ${file.name}`}
+                className="text-ink-400 hover:text-bone-100"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-end gap-2 pb-2">
         <button
           type="button"
@@ -109,6 +145,23 @@ export default function Composer({ onSend, onError, disabled = false, dictationM
           } disabled:cursor-not-allowed disabled:opacity-30`}
         >
           <MicIcon className={active || transcribing ? "size-5 animate-pulse" : "size-5"} />
+        </button>
+
+        <input
+          ref={fileInput}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={addFiles}
+        />
+        <button
+          type="button"
+          onClick={() => fileInput.current?.click()}
+          disabled={disabled}
+          aria-label="Anexar arquivo"
+          className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-ink-700 bg-ink-950 text-bone-300 transition hover:border-brass-500/50 hover:text-bone-100 disabled:cursor-not-allowed disabled:opacity-30"
+        >
+          <PaperclipIcon className="size-5" />
         </button>
 
         <textarea
